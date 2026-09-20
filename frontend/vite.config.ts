@@ -1,4 +1,4 @@
-
+```ts
 import { fileURLToPath } from 'url'
 import path from 'path'
 import { defineConfig, loadEnv } from 'vite'
@@ -10,11 +10,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url))
 // https://vite.dev/config/
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '')
-  const apiBaseUrl =
-    env.VITE_API_URL ||
-    env.VITE_API_BASE_URL ||
-    env.VITE_API_BACKEND_URL ||
-    'https://bath-sevok-server-nlbg.onrender.com'
+  const apiBaseUrl = env.VITE_API_BASE_URL
 
   return {
     plugins: [
@@ -107,4 +103,4 @@ export default defineConfig(({ mode }) => {
     },
   }
 })
-
+```
