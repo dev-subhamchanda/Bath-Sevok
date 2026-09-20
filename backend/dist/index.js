@@ -12,32 +12,32 @@ const PORT = Number(process.env.PORT ?? 3001);
 const app = express();
 const httpServer = createServer(app);
 const clientOrigin = process.env.CLIENT_ORIGIN ?? 'http://localhost:3000';
-//Socket Io
+const isVercelRuntime = Boolean(process.env.VERCEL);
 const io = new SocketIOServer(httpServer, {
     cors: { origin: process.env.CLIENT_ORIGIN ?? '*' },
 });
-//middlewares
 app.use(morgan('dev'));
 app.use(cookieParser());
 app.use(express.json());
-// app.use(cookieParser());
 app.use(cors({ origin: clientOrigin, credentials: true }));
 app.use(express.urlencoded({ extended: true }));
-app.get('/', (req, res) => {
-    res.json({
-        "msg": "Hello World !"
-    });
+app.use(async (_req, _res, next) => {
+    try {
+        await initializeRuntime();
+        next();
+    }
+    catch (error) {
+        next(error);
+    }
 });
-// ROUTES IMPORT;
+app.get('/', (_req, res) => {
+    res.json({ msg: 'Hello World !' });
+});
 import { authRouter } from './modules/auth/auth.route.js';
 import { shipmentRouter } from './modules/shipment/shipment.route.js';
 import { vehiclesRouter } from './modules/vehicles/vehicles.route.js';
 import { routeRouter } from './modules/routes/route.route.js';
 import { incidentRouter } from './modules/incidents/incident.route.js';
-/* --- api/v1/auth/ --
-    * --POST signup/
-    * --POST signin/
-*/
 app.use('/auth', authRouter);
 app.use('/api/v1/auth', authRouter);
 app.use('/shipments', shipmentRouter);
@@ -99,19 +99,35 @@ io.on('connection', (socket) => {
         }
     });
 });
-const startServer = async () => {
+let runtimeReady = false;
+const initializeRuntime = async () => {
+    if (runtimeReady) {
+        return;
+    }
     await runDB();
     await connectLocationStore();
-    httpServer.listen(PORT, () => console.log(`http://localhost:${PORT}/`));
+    runtimeReady = true;
 };
-startServer().catch((error) => {
-    console.error('Failed to start server:', error);
-    process.exit(1);
-});
+const startServer = async () => {
+    await initializeRuntime();
+    if (!isVercelRuntime) {
+        httpServer.listen(PORT, () => console.log(`http://localhost:${PORT}/`));
+    }
+};
+if (!isVercelRuntime) {
+    void startServer().catch((error) => {
+        console.error('Failed to start server:', error);
+        process.exit(1);
+    });
+}
 const shutdown = async () => {
     await closeLocationStore();
-    httpServer.close();
+    if (!isVercelRuntime) {
+        httpServer.close();
+    }
 };
 process.once('SIGINT', () => { void shutdown(); });
 process.once('SIGTERM', () => { void shutdown(); });
+export default app;
+export { initializeRuntime, io, httpServer };
 //# sourceMappingURL=index.js.map
