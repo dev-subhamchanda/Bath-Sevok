@@ -11,17 +11,17 @@ dotenv.config();
 const PORT = Number(process.env.PORT ?? 3001);
 const app = express();
 const httpServer = createServer(app);
-const clientOrigin = process.env.CLIENT_ORIGIN ?? 'http://localhost:3000';
-//Socket Io
+const clientOrigin = process.env.CLIENT_ORIGIN;
 const io = new SocketIOServer(httpServer, {
-    cors: { origin: process.env.CLIENT_ORIGIN ?? '*' },
+    cors: { origin: clientOrigin ?? '*' },
 });
 //middlewares
 app.use(morgan('dev'));
 app.use(cookieParser());
 app.use(express.json());
 // app.use(cookieParser());
-app.use(cors({ origin: clientOrigin, credentials: true }));
+// app.use(cors({ origin: clientOrigin ?? '*', credentials: true }));
+app.use(cors());
 app.use(express.urlencoded({ extended: true }));
 app.get('/', (req, res) => {
     res.json({

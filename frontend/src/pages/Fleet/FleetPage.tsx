@@ -22,9 +22,7 @@ export const FleetPage: React.FC<{ initialTab?: "vehicles" | "deliveries" }> = (
   const loadShipments = useCallback(async () => {
     try {
       const list = await shipmentApi.getAll();
-      if (list && list.length > 0) {
-        setShipments(list);
-      }
+      setShipments(list);
     } catch (err) {
       console.warn("Could not fetch shipments on FleetPage:", err);
     }
@@ -74,7 +72,7 @@ export const FleetPage: React.FC<{ initialTab?: "vehicles" | "deliveries" }> = (
               compact
               icon="inventory_2"
               iconColor="text-[#27638c]"
-              value={shipments.length || 86}
+              value={shipments.length}
               unit="Consignments"
               label="Consignments"
             />
@@ -137,7 +135,7 @@ export const FleetPage: React.FC<{ initialTab?: "vehicles" | "deliveries" }> = (
                   activeTab === "deliveries" ? "bg-white text-[#003356]" : "bg-[#ebeef4] text-[#72777f]"
                 }`}
               >
-                {shipments.length || 86}
+                {shipments.length}
               </span>
             </button>
           </div>
@@ -170,7 +168,10 @@ export const FleetPage: React.FC<{ initialTab?: "vehicles" | "deliveries" }> = (
           </>
         ) : (
           <>
-            <ConsignmentsTable onOpenCreateModal={() => setIsCreateModalOpen(true)} />
+            <ConsignmentsTable
+              onOpenCreateModal={() => setIsCreateModalOpen(true)}
+              liveOnly
+            />
             <RouteComparisonPanel />
           </>
         )}

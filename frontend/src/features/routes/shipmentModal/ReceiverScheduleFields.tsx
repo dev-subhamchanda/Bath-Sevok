@@ -1,34 +1,9 @@
 import React from "react";
+import { useFormContext } from "react-hook-form";
+import type { ShipmentFormValues } from "./formTypes";
 
-interface ReceiverScheduleFieldsProps {
-  pickupTime: string;
-  onPickupTimeChange: (val: string) => void;
-  expectedDelivery: string;
-  onExpectedDeliveryChange: (val: string) => void;
-  receiverName: string;
-  onReceiverNameChange: (val: string) => void;
-  receiverFacility: string;
-  onReceiverFacilityChange: (val: string) => void;
-  receiverPhone: string;
-  onReceiverPhoneChange: (val: string) => void;
-  specialInstructions: string;
-  onSpecialInstructionsChange: (val: string) => void;
-}
-
-export const ReceiverScheduleFields: React.FC<ReceiverScheduleFieldsProps> = ({
-  pickupTime,
-  onPickupTimeChange,
-  expectedDelivery,
-  onExpectedDeliveryChange,
-  receiverName,
-  onReceiverNameChange,
-  receiverFacility,
-  onReceiverFacilityChange,
-  receiverPhone,
-  onReceiverPhoneChange,
-  specialInstructions,
-  onSpecialInstructionsChange
-}) => {
+export const ReceiverScheduleFields: React.FC = () => {
+  const { register, formState: { errors } } = useFormContext<ShipmentFormValues>();
   return (
     <>
       {/* Pickup and Expected Delivery Schedules */}
@@ -40,12 +15,12 @@ export const ReceiverScheduleFields: React.FC<ReceiverScheduleFieldsProps> = ({
           </label>
           <input
             type="datetime-local"
-            required
-            value={pickupTime}
-            onChange={(e) => onPickupTimeChange(e.target.value)}
+            {...register("pickupTime", { required: "Pickup time is required" })}
             className="w-full h-10 px-3 rounded-xl bg-[#f1f4fa] text-xs text-[#181c20] border border-[#e5e8ee] focus:border-[#174a73] focus:bg-white focus:outline-none"
           />
         </div>
+
+          {errors.pickupTime && <span className="text-[10px] text-rose-600">{errors.pickupTime.message}</span>}
 
         <div className="flex flex-col gap-1.5">
           <label className="text-xs font-bold text-[#181c20] flex items-center gap-1.5">
@@ -54,9 +29,7 @@ export const ReceiverScheduleFields: React.FC<ReceiverScheduleFieldsProps> = ({
           </label>
           <input
             type="datetime-local"
-            required
-            value={expectedDelivery}
-            onChange={(e) => onExpectedDeliveryChange(e.target.value)}
+            {...register("expectedDelivery", { required: "Expected delivery is required" })}
             className="w-full h-10 px-3 rounded-xl bg-[#f1f4fa] text-xs text-[#181c20] border border-[#e5e8ee] focus:border-[#174a73] focus:bg-white focus:outline-none"
           />
         </div>
@@ -64,6 +37,8 @@ export const ReceiverScheduleFields: React.FC<ReceiverScheduleFieldsProps> = ({
 
       {/* Receiver / Contact Details */}
       <div className="flex flex-col gap-2 p-3.5 rounded-xl bg-[#f8fafc] border border-[#e5e8ee]">
+        {errors.expectedDelivery && <span className="text-[10px] text-rose-600">{errors.expectedDelivery.message}</span>}
+
         <label className="text-xs font-bold text-[#003356] flex items-center gap-1.5">
           <span className="material-symbols-outlined text-[17px] text-[#27638c]">contact_phone</span>
           <span>Receiver / Point of Contact Details</span>
@@ -71,25 +46,19 @@ export const ReceiverScheduleFields: React.FC<ReceiverScheduleFieldsProps> = ({
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
           <input
             type="text"
-            required
-            value={receiverName}
-            onChange={(e) => onReceiverNameChange(e.target.value)}
+            {...register("receiverName", { required: "Receiver name is required" })}
             placeholder="Receiver Officer Name"
             className="w-full h-9 px-3 rounded-lg bg-white text-xs text-[#181c20] border border-[#e5e8ee] focus:border-[#174a73] focus:outline-none"
           />
           <input
             type="text"
-            required
-            value={receiverFacility}
-            onChange={(e) => onReceiverFacilityChange(e.target.value)}
+            {...register("receiverFacility", { required: "Receiving facility is required" })}
             placeholder="Receiving Facility / Unit"
             className="w-full h-9 px-3 rounded-lg bg-white text-xs text-[#181c20] border border-[#e5e8ee] focus:border-[#174a73] focus:outline-none"
           />
           <input
             type="text"
-            required
-            value={receiverPhone}
-            onChange={(e) => onReceiverPhoneChange(e.target.value)}
+            {...register("receiverPhone", { required: "Receiver phone is required", pattern: { value: /^[+\d][\d\s-]{7,19}$/, message: "Enter a valid phone number" } })}
             placeholder="Contact Phone #"
             className="w-full h-9 px-3 rounded-lg bg-white text-xs text-[#181c20] border border-[#e5e8ee] focus:border-[#174a73] focus:outline-none"
           />
@@ -104,8 +73,7 @@ export const ReceiverScheduleFields: React.FC<ReceiverScheduleFieldsProps> = ({
         </label>
         <textarea
           rows={2}
-          value={specialInstructions}
-          onChange={(e) => onSpecialInstructionsChange(e.target.value)}
+          {...register("specialInstructions", { maxLength: { value: 1000, message: "Keep instructions under 1000 characters" } })}
           placeholder="e.g. Temperature monitoring requirements, hazardous materials protocol, road clearance permit note..."
           className="w-full p-3 rounded-xl bg-[#f1f4fa] text-xs text-[#181c20] border border-[#e5e8ee] focus:border-[#174a73] focus:bg-white focus:outline-none resize-none"
         />

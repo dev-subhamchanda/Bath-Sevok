@@ -1,35 +1,13 @@
 import React from "react";
-import { registeredDrivers, cargoCommodityPresets } from "@/services/mock/driversData";
+import { useFormContext } from "react-hook-form";
+import { cargoCommodityPresets } from "@/services/mock/driversData";
+import type { ShipmentFormValues } from "./formTypes";
 
-interface VehicleCommodityFieldsProps {
-  shipmentId: string;
-  onNewShipmentId: () => void;
-  onShipmentIdChange: (val: string) => void;
-  commodity: string;
-  onCommodityChange: (val: string) => void;
-  weightKg: number;
-  onWeightKgChange: (val: number) => void;
-  priority: 1 | 2 | 3;
-  onPriorityChange: (val: 1 | 2 | 3) => void;
-  selectedVehicleId: string;
-  onVehicleIdChange: (val: string) => void;
-  selectedVehicleInfo: { vehicleNumber: string; vehicleType: string };
-}
-
-export const VehicleCommodityFields: React.FC<VehicleCommodityFieldsProps> = ({
-  shipmentId,
-  onNewShipmentId,
-  onShipmentIdChange,
-  commodity,
-  onCommodityChange,
-  weightKg,
-  onWeightKgChange,
-  priority,
-  onPriorityChange,
-  selectedVehicleId,
-  onVehicleIdChange,
-  selectedVehicleInfo
-}) => {
+export const VehicleCommodityFields: React.FC = () => {
+  const { register, setValue, watch, formState: { errors } } = useFormContext<ShipmentFormValues>();
+  const priority = watch("priority");
+  const vehicleUnit = watch("vehicleUnit");
+  const fleetClassification = watch("fleetClassification");
   return (
     <>
       {/* Consignment ID, Commodity, Weight */}
@@ -40,7 +18,7 @@ export const VehicleCommodityFields: React.FC<VehicleCommodityFieldsProps> = ({
             <label className="text-xs font-bold text-[#181c20]">Consignment ID</label>
             <button
               type="button"
-              onClick={onNewShipmentId}
+              onClick={() => setValue("trackingNumber", `SHP-2026-${Math.floor(100 + Math.random() * 900)}`, { shouldValidate: true })}
               className="text-[10px] text-[#174a73] hover:underline flex items-center gap-0.5 cursor-pointer"
               title="Generate new ID"
             >
@@ -51,19 +29,18 @@ export const VehicleCommodityFields: React.FC<VehicleCommodityFieldsProps> = ({
           <input
             type="text"
             required
-            value={shipmentId}
-            onChange={(e) => onShipmentIdChange(e.target.value)}
+            {...register("trackingNumber", { required: "Tracking number is required", minLength: { value: 3, message: "Enter a valid tracking number" } })}
             placeholder="e.g. SHP-2026-089"
             className="w-full h-10 px-3 rounded-xl bg-[#f1f4fa] text-xs font-mono font-semibold text-[#003356] border border-[#e5e8ee] focus:border-[#174a73] focus:bg-white focus:outline-none transition-colors"
           />
+          {errors.trackingNumber && <span className="text-[10px] text-rose-600">{errors.trackingNumber.message}</span>}
         </div>
 
         {/* Cargo / Shipment Type */}
         <div className="sm:col-span-2 flex flex-col gap-1.5">
           <label className="text-xs font-bold text-[#181c20]">Cargo / Commodity Type</label>
           <select
-            value={commodity}
-            onChange={(e) => onCommodityChange(e.target.value)}
+            {...register("commodity", { required: "Commodity is required" })}
             className="w-full h-10 px-3 rounded-xl bg-[#f1f4fa] text-xs font-medium text-[#181c20] border border-[#e5e8ee] focus:border-[#174a73] focus:bg-white focus:outline-none transition-colors"
           >
             {cargoCommodityPresets.map((opt) => (
@@ -82,8 +59,7 @@ export const VehicleCommodityFields: React.FC<VehicleCommodityFieldsProps> = ({
             min={10}
             max={40000}
             required
-            value={weightKg}
-            onChange={(e) => onWeightKgChange(Math.max(1, Number(e.target.value)))}
+            {...register("weightKg", { valueAsNumber: true, required: "Weight is required", min: { value: 0, message: "Weight cannot be negative" } })}
             placeholder="1200"
             className="w-full h-10 px-3 rounded-xl bg-[#f1f4fa] text-xs font-semibold text-[#003356] border border-[#e5e8ee] focus:border-[#174a73] focus:bg-white focus:outline-none transition-colors"
           />
@@ -104,7 +80,7 @@ export const VehicleCommodityFields: React.FC<VehicleCommodityFieldsProps> = ({
               <button
                 key={p.level}
                 type="button"
-                onClick={() => onPriorityChange(p.level as 1 | 2 | 3)}
+                onClick={() => setValue("priority", p.level as 1 | 2 | 3, { shouldValidate: true, shouldDirty: true })}
                 className={`py-2 px-2.5 text-left rounded-lg transition-all cursor-pointer flex flex-col gap-0.5 ${
                   isSelected
                     ? "bg-white shadow-sm ring-2 ring-[#003356]/20 font-bold"
@@ -122,29 +98,28 @@ export const VehicleCommodityFields: React.FC<VehicleCommodityFieldsProps> = ({
         </div>
       </div>
 
-      {/* Vehicle Selection Sync */}
+      {/* Vehicle classification is entered locally and sent with the shipment. */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
         <div className="flex flex-col gap-1.5">
           <label className="text-xs font-bold text-[#181c20]">Vehicle Unit Selection</label>
           <select
-            value={selectedVehicleId}
-            onChange={(e) => onVehicleIdChange(e.target.value)}
+            {...register("vehicleUnit", { required: "Vehicle unit is required" })}
             className="w-full h-10 px-3 rounded-xl bg-[#f1f4fa] text-xs font-semibold text-[#003356] border border-[#e5e8ee] focus:border-[#174a73] focus:bg-white focus:outline-none"
           >
-            {registeredDrivers.map((d) => (
-              <option key={d.id} value={d.backendVehicleId || d.vehicleId}>
-                {d.vehicleNumber} — {d.vehicleType}
-              </option>
-            ))}
+            <option value="heavy">Heavy</option>
+            <option value="moderate">Moderate</option>
+            <option value="light">Light</option>
           </select>
         </div>
 
         <div className="flex flex-col gap-1.5">
           <label className="text-xs font-bold text-[#181c20]">Transit Fleet Classification</label>
-          <div className="h-10 px-3 rounded-xl bg-[#f1f4fa] flex items-center justify-between text-xs text-[#42474e] border border-[#e5e8ee]">
-            <span className="font-semibold text-[#003356]">{selectedVehicleInfo.vehicleType}</span>
-            <span className="text-[10px] font-mono text-[#72777f]">{selectedVehicleInfo.vehicleNumber}</span>
-          </div>
+          <select
+            {...register("fleetClassification", { required: "Fleet classification is required" })}
+            className="w-full h-10 px-3 rounded-xl bg-[#f1f4fa] text-xs font-semibold text-[#003356] border border-[#e5e8ee] focus:border-[#174a73] focus:bg-white focus:outline-none"
+          >
+            <option value="transit">Transit Fleet</option>
+          </select>
         </div>
       </div>
     </>

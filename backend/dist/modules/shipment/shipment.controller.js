@@ -4,6 +4,7 @@ import { Vehicle } from '../../models/vehicle.model.js';
 import { uploadShipmentImage } from '../../config/cloudinary.js';
 import { getVehicleLocation } from '../vehicles/vehicle-location.service.js';
 import mongoose from 'mongoose';
+const shipmentStatuses = ['PENDING', 'ASSIGNED', 'IN_TRANSIT', 'DELIVERED', 'CANCELLED'];
 const parseField = (value) => {
     if (typeof value !== 'string') {
         return value;
@@ -37,17 +38,35 @@ const isRouteSelection = (value) => {
 };
 const createShipment = async (req, res) => {
     try {
-        const { loadType, vehicleId, driverId, routeId, weightKg, priority, route: routeField, } = req.body;
+        const { trackingNumber, status, expectedDelivery: expectedDeliveryField, loadType, vehicleUnit, fleetClassification, vehicleId, driverId, routeId, weightKg, priority, route: routeField, } = req.body;
         const origin = parseField(req.body.origin);
         const destination = parseField(req.body.destination);
         const route = parseField(routeField);
         const parsedWeightKg = typeof weightKg === 'string' ? Number(weightKg) : weightKg;
+        const expectedDelivery = expectedDeliveryField ? new Date(expectedDeliveryField) : undefined;
         if (!req.file) {
             res.status(400).json({ message: 'image is required' });
             return;
         }
         if (typeof loadType !== 'string' || loadType.trim().length === 0) {
             res.status(400).json({ message: 'loadType is required' });
+            return;
+        }
+        if (!['heavy', 'light', 'moderate'].includes(vehicleUnit)) {
+            res.status(400).json({ message: 'vehicleUnit must be heavy, light, or moderate' });
+            return;
+        }
+        if (fleetClassification !== 'transit') {
+            res.status(400).json({ message: 'fleetClassification must be transit' });
+            return;
+        }
+        if (status !== undefined && !shipmentStatuses.includes(status)) {
+            res.status(400).json({ message: 'Invalid shipment status' });
+            return;
+        }
+        const parsedStatus = status === undefined ? undefined : status;
+        if (expectedDeliveryField && (!expectedDelivery || Number.isNaN(expectedDelivery.getTime()))) {
+            res.status(400).json({ message: 'expectedDelivery must be a valid date' });
             return;
         }
         if (!isPoint(origin) || !isPoint(destination)) {
@@ -58,45 +77,39 @@ const createShipment = async (req, res) => {
             res.status(400).json({ message: 'route must include distanceKm and durationMinutes from the alternatives endpoint' });
             return;
         }
-        if (!mongoose.isValidObjectId(vehicleId) || !mongoose.isValidObjectId(driverId)) {
-            res.status(400).json({ message: 'Valid vehicleId and driverId are required' });
-            return;
-        }
         const [vehicle, driver] = await Promise.all([
-            Vehicle.findById(vehicleId),
-            Driver.findById(driverId),
+            mongoose.isValidObjectId(vehicleId) ? Vehicle.findById(vehicleId) : null,
+            mongoose.isValidObjectId(driverId) ? Driver.findById(driverId) : null,
         ]);
-        if (!vehicle) {
-            res.status(404).json({ message: 'Vehicle not found' });
-            return;
-        }
-        if (!driver) {
-            res.status(404).json({ message: 'Driver not found' });
-            return;
-        }
         if (typeof parsedWeightKg !== 'number' || !Number.isFinite(parsedWeightKg) || parsedWeightKg < 0) {
             res.status(400).json({ message: 'weightKg must be a non-negative number' });
             return;
         }
-        if (parsedWeightKg > vehicle.capacityKg) {
+        if (vehicle && parsedWeightKg > vehicle.capacityKg) {
             res.status(400).json({ message: 'weightKg exceeds vehicle capacity' });
             return;
         }
         const upload = await uploadShipmentImage(req.file);
-        const expectedDelivery = new Date(Date.now() + route.durationMinutes * 60 * 1000);
+        const deliveryDate = expectedDelivery || new Date(Date.now() + route.durationMinutes * 60 * 1000);
         const shipment = await Shipment.create({
+            ...(typeof trackingNumber === 'string' && trackingNumber.trim().length > 0
+                ? { trackingNumber: trackingNumber.trim() }
+                : {}),
             loadType: loadType.trim(),
+            vehicleUnit,
+            fleetClassification,
             imageUrl: upload.secureUrl,
             imagePublicId: upload.publicId,
             origin,
             destination,
-            vehicleId,
-            driverId,
+            ...(vehicle ? { vehicleId: vehicle._id } : {}),
+            ...(driver ? { driverId: driver._id } : {}),
             routeId: mongoose.isValidObjectId(routeId) ? routeId : undefined,
             route,
             weightKg: parsedWeightKg,
             priority,
-            expectedDelivery,
+            expectedDelivery: deliveryDate,
+            ...(parsedStatus ? { status: parsedStatus } : {}),
         });
         const populatedShipment = await shipment.populate([
             { path: 'driverId', select: '-__v' },

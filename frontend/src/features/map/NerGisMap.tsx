@@ -172,6 +172,14 @@ export const NerGisMap: React.FC = () => {
     return [91.8933, 25.5788]; // Default: Shillong [lng, lat]
   }, [activeShipment]);
 
+  // Tracking from Fleet selects a shipment before opening this page.
+  useEffect(() => {
+    if (!selectedShipmentId || !activeShipment?.originCoordinates) return;
+    setTargetCoords([activeShipment.originCoordinates[1], activeShipment.originCoordinates[0]]);
+    setTargetZoom(11);
+    setTriggerCenter((current) => current + 1);
+  }, [selectedShipmentId, activeShipment]);
+
   // Manual refresh / retry handler for user interaction
   const fetchRouteAlternatives = useCallback(async () => {
     setIsLoadingRoutes(true);

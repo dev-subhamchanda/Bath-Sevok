@@ -1,22 +1,9 @@
 import React from "react";
+import { useFormContext } from "react-hook-form";
+import type { ShipmentFormValues } from "./formTypes";
 
-interface DriverDetailsFieldsProps {
-  driverName: string;
-  onDriverNameChange: (val: string) => void;
-  driverPhone: string;
-  onDriverPhoneChange: (val: string) => void;
-  driverLicenseId: string;
-  onDriverLicenseIdChange: (val: string) => void;
-}
-
-export const DriverDetailsFields: React.FC<DriverDetailsFieldsProps> = ({
-  driverName,
-  onDriverNameChange,
-  driverPhone,
-  onDriverPhoneChange,
-  driverLicenseId,
-  onDriverLicenseIdChange
-}) => {
+export const DriverDetailsFields: React.FC = () => {
+  const { register, formState: { errors } } = useFormContext<ShipmentFormValues>();
   return (
     <div className="flex flex-col gap-3 p-4 rounded-xl bg-[#eff6ff]/70 border border-[#cfe4ff]">
       <div className="flex items-center justify-between">
@@ -38,12 +25,11 @@ export const DriverDetailsFields: React.FC<DriverDetailsFieldsProps> = ({
           <div className="relative">
             <input
               type="text"
-              required
-              value={driverName}
-              onChange={(e) => onDriverNameChange(e.target.value)}
+              {...register("driverName", { required: "Driver name is required", minLength: { value: 2, message: "Enter a valid driver name" } })}
               placeholder="Enter driver name"
               className="w-full h-10 px-3 pr-8 rounded-lg bg-white text-xs font-semibold text-[#181c20] border border-[#cfe4ff] focus:border-[#174a73] focus:outline-none"
             />
+            {errors.driverName && <span className="text-[10px] text-rose-600">{errors.driverName.message}</span>}
             <span className="absolute right-2.5 top-2.5 material-symbols-outlined text-[18px] text-slate-400 pointer-events-none">
               person
             </span>
@@ -58,12 +44,11 @@ export const DriverDetailsFields: React.FC<DriverDetailsFieldsProps> = ({
           <div className="relative">
             <input
               type="tel"
-              required
-              value={driverPhone}
-              onChange={(e) => onDriverPhoneChange(e.target.value)}
+              {...register("driverPhone", { required: "Driver phone is required", pattern: { value: /^[+\d][\d\s-]{7,19}$/, message: "Enter a valid phone number" } })}
               placeholder="Enter phone number"
               className="w-full h-10 px-3 pr-8 rounded-lg bg-white text-xs font-semibold text-[#181c20] border border-[#cfe4ff] focus:border-[#174a73] focus:outline-none"
             />
+            {errors.driverPhone && <span className="text-[10px] text-rose-600">{errors.driverPhone.message}</span>}
             <span className="absolute right-2.5 top-2.5 material-symbols-outlined text-[18px] text-slate-400 pointer-events-none">
               call
             </span>
@@ -78,12 +63,11 @@ export const DriverDetailsFields: React.FC<DriverDetailsFieldsProps> = ({
           <div className="relative">
             <input
               type="text"
-              required
-              value={driverLicenseId}
-              onChange={(e) => onDriverLicenseIdChange(e.target.value)}
+              {...register("driverLicenseId", { required: "Driver license or ID is required", minLength: { value: 3, message: "Enter a valid license or ID" } })}
               placeholder="Enter driver license or ID"
               className="w-full h-10 px-3 pr-8 rounded-lg bg-white text-xs font-semibold text-[#181c20] border border-[#cfe4ff] focus:border-[#174a73] focus:outline-none"
             />
+            {errors.driverLicenseId && <span className="text-[10px] text-rose-600">{errors.driverLicenseId.message}</span>}
             <span className="absolute right-2.5 top-2.5 material-symbols-outlined text-[18px] text-slate-400 pointer-events-none">
               badge
             </span>
