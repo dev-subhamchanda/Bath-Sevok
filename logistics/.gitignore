@@ -1,0 +1,12 @@
+__pycache__/
+*.py[oc]
+.venv
+data/*
+!data/schema.sql
+*.md
+scripts/
+domain/
+*.zip
+*.patches
+*.json
+!pyproject.toml
