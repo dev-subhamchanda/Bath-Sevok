@@ -1,0 +1,1 @@
+{"version":3,"file":"incident.service.d.ts","sourceRoot":"","sources":["../../../src/modules/incidents/incident.service.ts"],"names":[],"mappings":"AAEA,MAAM,MAAM,gBAAgB,GAAG,KAAK,GAAG,QAAQ,GAAG,MAAM,GAAG,UAAU,CAAC;AACtE,MAAM,MAAM,UAAU,GAAG,MAAM,GAAG,qBAAqB,GAAG,SAAS,CAAC;AAEpE,eAAO,MAAM,aAAa,aAAc,gBAAgB,KAAG,UAU1D,CAAC;AAEF,eAAO,MAAM,iBAAiB;;;;;;;;;;;;;;;;;;;;;;;;;MAGG,CAAC"}

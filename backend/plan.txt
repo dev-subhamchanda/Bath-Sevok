@@ -1,0 +1,897 @@
+You are the senior backend architect and implementation engineer for our Smart India Hackathon project.
+
+PROJECT:
+SIH Problem Statement 26002 — Smart Logistics.
+
+OBJECTIVE:
+Build a production-quality MVP backend for an intelligent logistics platform that supports:
+- User authentication
+- Drivers
+- Vehicles
+- Shipments
+- Route calculation
+- AI-based route prediction
+- Vehicle GPS tracking
+- Incidents
+- Weather information
+- Alerts
+- Historical trip data
+- Realtime updates
+
+IMPORTANT ARCHITECTURE DECISIONS:
+
+1. Backend:
+Node.js + Express + TypeScript.
+
+2. Database:
+MongoDB + Mongoose.
+
+3. DO NOT USE:
+- PostgreSQL
+- PostGIS
+- Prisma
+- Kafka
+- RabbitMQ
+- Kubernetes
+- Microservices architecture
+- Custom road-routing engine
+
+We want a modular monolith.
+
+4. ROUTING:
+Use OpenRouteService / openrouteservice API based on OpenStreetMap data for road route calculation.
+
+The AI must NOT generate road geometry or invent roads.
+
+OpenRouteService is responsible for calculating physically valid road routes.
+
+5. AI:
+AI will be a separate Python/FastAPI service.
+
+The Node.js backend will call the AI service through HTTP.
+
+AI responsibilities:
+- Predict travel duration
+- Predict delay
+- Calculate delay probability
+- Calculate route risk score
+- Optionally explain major risk factors
+
+6. WEATHER:
+Weather data will be obtained by the backend from an external weather API and passed to the AI through structured features.
+
+7. REALTIME:
+Use Socket.IO for vehicle GPS updates and alerts.
+
+8. GEOLOCATION:
+Use MongoDB GeoJSON and 2dsphere indexes.
+
+Coordinates must always follow:
+[longitude, latitude]
+
+9. FRONTENDS:
+The backend must support:
+- Next.js/React web frontend
+- React Native/Expo mobile application
+
+Both must communicate with the same backend.
+
+==================================================
+ARCHITECTURE
+==================================================
+
+Frontend
+    |
+    +--> Next.js Web
+    |
+    +--> React Native Mobile
+              |
+              v
+      Node.js + Express API
+              |
+       +------+-------+----------+
+       |              |          |
+       v              v          v
+   MongoDB       OpenRouteService AI Service
+       |              |          |
+       |              |          |
+       +--------------+----------+
+              |
+          Socket.IO
+              |
+              v
+        Realtime clients
+
+==================================================
+MONGODB COLLECTIONS
+==================================================
+
+Create Mongoose models for:
+
+1. users
+
+Fields:
+- name
+- email
+- passwordHash
+- role
+- phone
+- createdAt
+- updatedAt
+
+Roles:
+ADMIN
+DISPATCHER
+DRIVER
+USER
+
+2. drivers
+
+Fields:
+- userId
+- licenseNumber
+- phone
+- status
+- createdAt
+- updatedAt
+
+3. vehicles
+
+Fields:
+- vehicleNumber
+- type
+- capacityKg
+- driverId
+- status
+- currentLocation
+- speedKmh
+- heading
+- createdAt
+- updatedAt
+
+currentLocation must be GeoJSON:
+
+{
+  type: "Point",
+  coordinates: [longitude, latitude]
+}
+
+Create:
+2dsphere index on currentLocation.
+
+4. shipments
+
+Fields:
+- trackingNumber
+- origin
+- destination
+- vehicleId
+- driverId
+- routeId
+- weightKg
+- priority
+- status
+- expectedDelivery
+- actualDelivery
+- createdAt
+- updatedAt
+
+5. routes
+
+Fields:
+- shipmentId
+- vehicleId
+- origin
+- destination
+- distanceKm
+- durationMinutes
+- geometry
+- encodedPolyline
+- routingProvider
+- prediction
+- recommended
+- createdAt
+- updatedAt
+
+prediction:
+
+{
+  predictedDurationMinutes,
+  predictedDelayMinutes,
+  delayProbability,
+  riskScore,
+  riskLevel
+}
+
+6. vehicle_locations
+
+Fields:
+- vehicleId
+- location GeoJSON Point
+- speedKmh
+- heading
+- timestamp
+
+Indexes:
+- location: 2dsphere
+- vehicleId + timestamp descending
+
+7. incidents
+
+Fields:
+- type
+- title
+- description
+- location GeoJSON Point
+- severity
+- status
+- source
+- startedAt
+- resolvedAt
+- createdAt
+
+Create 2dsphere index on location.
+
+8. weather_observations
+
+Fields:
+- location GeoJSON Point
+- temperature
+- humidity
+- rainfallMm
+- windSpeedKmh
+- visibilityKm
+- condition
+- recordedAt
+- source
+
+Create 2dsphere index on location.
+
+9. trip_history
+
+Fields:
+- shipmentId
+- vehicleId
+- routeId
+- distanceKm
+- plannedDurationMinutes
+- actualDurationMinutes
+- delayMinutes
+- trafficLevel
+- weather
+- incidentCount
+- roadCondition
+- averageSpeedKmh
+- startedAt
+- completedAt
+
+This collection is intended to become the AI training dataset.
+
+10. alerts
+
+Fields:
+- type
+- severity
+- title
+- message
+- userId
+- vehicleId
+- shipmentId
+- routeId
+- status
+- createdAt
+- readAt
+
+==================================================
+PROJECT STRUCTURE
+==================================================
+
+Create:
+
+backend/
+├── src/
+│   ├── config/
+│   │   ├── env.ts
+│   │   ├── database.ts
+│   │   └── socket.ts
+│   │
+│   ├── middlewares/
+│   │   ├── auth.middleware.ts
+│   │   ├── error.middleware.ts
+│   │   ├── validation.middleware.ts
+│   │   └── rateLimit.middleware.ts
+│   │
+│   ├── modules/
+│   │   ├── auth/
+│   │   ├── users/
+│   │   ├── drivers/
+│   │   ├── vehicles/
+│   │   ├── shipments/
+│   │   ├── routes/
+│   │   ├── incidents/
+│   │   ├── weather/
+│   │   ├── alerts/
+│   │   └── ai/
+│   │
+│   ├── integrations/
+│   │   ├── routing/
+│   │   │   └── openRouteService.ts
+│   │   ├── weather/
+│   │   │   └── weatherClient.ts
+│   │   └── ai/
+│   │       └── aiClient.ts
+│   │
+│   ├── sockets/
+│   │   ├── vehicle.socket.ts
+│   │   └── alert.socket.ts
+│   │
+│   ├── utils/
+│   ├── app.ts
+│   └── server.ts
+│
+├── tests/
+├── logs/
+├── .env
+├── .env.example
+├── package.json
+└── tsconfig.json
+
+Follow this structure unless there is a strong technical reason to improve it.
+
+==================================================
+AUTHENTICATION
+==================================================
+
+Implement:
+
+POST /api/v1/auth/register
+POST /api/v1/auth/login
+POST /api/v1/auth/refresh
+POST /api/v1/auth/logout
+GET /api/v1/auth/me
+
+Use:
+- secure password hashing
+- JWT access tokens
+- refresh-token/session mechanism
+- authentication middleware
+- role-based authorization
+
+Never store plaintext passwords.
+
+==================================================
+VEHICLE APIs
+==================================================
+
+GET /api/v1/vehicles
+POST /api/v1/vehicles
+GET /api/v1/vehicles/:id
+PATCH /api/v1/vehicles/:id
+DELETE /api/v1/vehicles/:id
+
+GPS:
+
+POST /api/v1/vehicles/:id/location
+GET /api/v1/vehicles/:id/locations
+
+When a GPS update arrives:
+1. Validate coordinates.
+2. Update vehicles.currentLocation.
+3. Store historical location in vehicle_locations.
+4. Emit Socket.IO vehicle update.
+
+==================================================
+SHIPMENT APIs
+==================================================
+
+POST /api/v1/shipments
+GET /api/v1/shipments
+GET /api/v1/shipments/:id
+PATCH /api/v1/shipments/:id
+
+==================================================
+ROUTE CALCULATION
+==================================================
+
+Implement:
+
+POST /api/v1/routes/compute
+
+Input:
+
+{
+  "origin": {
+    "latitude": 26.1445,
+    "longitude": 91.7362
+  },
+  "destination": {
+    "latitude": 25.5788,
+    "longitude": 91.8933
+  },
+  "vehicleId": "..."
+}
+
+The backend must:
+
+1. Validate input.
+2. Load vehicle from MongoDB.
+3. Call OpenRouteService.
+4. Request appropriate routing profile.
+5. Receive route information.
+6. Normalize the response into our own internal route format.
+7. Store relevant route information in MongoDB.
+8. Return route candidates to frontend.
+
+Do not expose OpenRouteService response format directly to the frontend.
+
+Create an abstraction layer:
+
+RouteProvider interface
+
+OpenRouteServiceProvider implements RouteProvider.
+
+This makes it possible to replace the routing provider later.
+
+==================================================
+SMART ROUTE PREDICTION
+==================================================
+
+Implement:
+
+POST /api/v1/routes/predict
+
+Process:
+
+1. Validate request.
+2. Load shipment.
+3. Load vehicle.
+4. Generate candidate routes using OpenRouteService.
+5. Gather historical information from MongoDB.
+6. Gather nearby incidents using MongoDB 2dsphere queries.
+7. Gather weather information.
+8. Build structured AI features.
+9. Send candidates to Python AI service.
+10. Validate AI response.
+11. Rank candidate routes.
+12. Save prediction.
+13. Save recommended route.
+14. Return complete result.
+
+==================================================
+AI REQUEST CONTRACT
+==================================================
+
+Send:
+
+{
+  "routes": [
+    {
+      "routeId": "route_a",
+      "distanceKm": 100,
+      "baselineDurationMinutes": 180,
+      "trafficLevel": "HIGH",
+      "rainfallMm": 45,
+      "visibilityKm": 2,
+      "windSpeedKmh": 25,
+      "incidentCount": 3,
+      "historicalDelayMinutes": 38,
+      "vehicleType": "TRUCK"
+    }
+  ]
+}
+
+==================================================
+AI RESPONSE CONTRACT
+==================================================
+
+Expect:
+
+{
+  "predictions": [
+    {
+      "routeId": "route_a",
+      "predictedDurationMinutes": 238,
+      "predictedDelayMinutes": 58,
+      "delayProbability": 0.81,
+      "riskScore": 0.84,
+      "riskLevel": "HIGH"
+    }
+  ]
+}
+
+Validate:
+- routeId
+- numeric values
+- probabilities between 0 and 1
+- riskScore between 0 and 1
+- valid riskLevel
+
+If AI service is unavailable:
+Return a graceful fallback based on routing-provider duration and available deterministic risk rules.
+
+Never crash the entire backend because AI is unavailable.
+
+==================================================
+ROUTE RANKING
+==================================================
+
+Implement a deterministic ranking layer after AI.
+
+Initial formula:
+
+40% predicted travel time
+30% delay probability
+20% risk score
+10% distance
+
+Normalize values before scoring.
+
+Make ranking configurable so weights can later be changed.
+
+The AI predicts.
+The backend makes the final business decision.
+
+==================================================
+INCIDENT SYSTEM
+==================================================
+
+Implement:
+
+POST /api/v1/incidents
+GET /api/v1/incidents
+GET /api/v1/incidents/nearby
+PATCH /api/v1/incidents/:id
+
+Use MongoDB geospatial queries.
+
+When a serious incident is created:
+1. Find affected vehicles/routes.
+2. Create alerts.
+3. Emit Socket.IO events.
+4. Optionally trigger route reassessment.
+
+==================================================
+WEATHER SYSTEM
+==================================================
+
+Implement an external weather provider abstraction.
+
+Do not hard-code weather-provider logic into controllers.
+
+Create:
+
+WeatherProvider interface
+
+Weather client should provide:
+
+- temperature
+- humidity
+- rainfall
+- wind
+- visibility
+- condition
+
+Cache/store observations in MongoDB.
+
+==================================================
+REALTIME SOCKET.IO
+==================================================
+
+Implement:
+
+vehicle:location
+vehicle:status
+shipment:updated
+incident:new
+alert:new
+route:updated
+
+Use authenticated Socket.IO connections.
+
+Drivers should only be able to send/update their authorized vehicle.
+
+Dispatchers/admins can subscribe to authorized fleet updates.
+
+==================================================
+ERROR HANDLING
+==================================================
+
+Create centralized error handling.
+
+All APIs should return a consistent structure:
+
+Success:
+
+{
+  "success": true,
+  "data": {},
+  "message": "..."
+}
+
+Error:
+
+{
+  "success": false,
+  "error": {
+    "code": "...",
+    "message": "...",
+    "details": []
+  }
+}
+
+Implement proper HTTP status codes.
+
+==================================================
+VALIDATION
+==================================================
+
+Use Zod or another strong TypeScript validation library.
+
+Validate:
+- request bodies
+- query parameters
+- route parameters
+- coordinates
+- IDs
+- enum values
+- pagination
+- AI responses
+- external API responses where practical
+
+==================================================
+SECURITY
+==================================================
+
+Implement:
+- Helmet
+- CORS
+- rate limiting
+- secure password hashing
+- JWT expiration
+- refresh-token revocation
+- role-based authorization
+- environment variables
+- input validation
+- centralized error handling
+- request logging
+
+Do not expose secrets.
+
+==================================================
+ENVIRONMENT VARIABLES
+==================================================
+
+Create .env.example containing:
+
+PORT=
+MONGODB_URI=
+
+JWT_ACCESS_SECRET=
+JWT_REFRESH_SECRET=
+
+OPENROUTESERVICE_API_KEY=
+
+AI_SERVICE_URL=
+
+WEATHER_API_KEY=
+
+CORS_ORIGIN=
+
+Never commit .env.
+
+==================================================
+LOGGING
+==================================================
+
+Use Pino/pino-http or equivalent.
+
+Log:
+- HTTP requests
+- errors
+- external API failures
+- AI service failures
+- route calculation failures
+- authentication failures
+
+Do not log passwords, tokens or API keys.
+
+==================================================
+TESTING
+==================================================
+
+Create tests for:
+
+1. Register
+2. Login
+3. Logout
+4. Protected route
+5. Vehicle creation
+6. GPS update
+7. Shipment creation
+8. Route calculation
+9. OpenRouteService failure
+10. AI service success
+11. AI service failure
+12. Incident creation
+13. Nearby incident query
+14. Authorization
+15. Validation failures
+
+Use mocked external APIs in unit/integration tests.
+
+==================================================
+IMPORTANT ENGINEERING RULES
+==================================================
+
+1. Do not over-engineer.
+
+2. Use modular monolith architecture.
+
+3. Keep controllers thin.
+
+4. Put business logic in services.
+
+5. Put database logic in repositories/data-access layers where useful.
+
+6. External APIs must be behind integration/provider modules.
+
+7. Never let frontend depend directly on OpenRouteService response format.
+
+8. Never let AI generate road coordinates.
+
+9. Never put routing logic inside MongoDB.
+
+10. Never put business logic inside Mongoose models unnecessarily.
+
+11. Use TypeScript strictly.
+
+12. Avoid any type wherever possible.
+
+13. Use async/await.
+
+14. Centralize configuration.
+
+15. Add proper indexes.
+
+16. Add pagination for list endpoints.
+
+17. Add API versioning:
+   /api/v1/...
+
+18. Make the system easy for another developer to understand.
+
+==================================================
+IMPLEMENTATION PROCESS
+==================================================
+
+Do NOT generate the entire backend blindly in one step.
+
+Work phase-by-phase.
+
+PHASE 1:
+Initialize project and dependencies.
+
+PHASE 2:
+Configure TypeScript, Express, environment handling and logging.
+
+PHASE 3:
+Connect MongoDB and implement models.
+
+PHASE 4:
+Implement authentication.
+
+PHASE 5:
+Implement users, drivers and vehicles.
+
+PHASE 6:
+Implement shipments.
+
+PHASE 7:
+Implement OpenRouteService integration.
+
+PHASE 8:
+Implement route APIs.
+
+PHASE 9:
+Implement GPS + Socket.IO.
+
+PHASE 10:
+Implement incidents.
+
+PHASE 11:
+Implement weather.
+
+PHASE 12:
+Implement trip history.
+
+PHASE 13:
+Implement AI client and feature builder.
+
+PHASE 14:
+Implement smart route prediction and ranking.
+
+PHASE 15:
+Implement alerts.
+
+PHASE 16:
+Implement tests.
+
+PHASE 17:
+Security review.
+
+PHASE 18:
+Docker/deployment preparation.
+
+After each phase:
+- verify TypeScript compilation
+- run tests
+- inspect generated files
+- fix errors
+- explain what was implemented
+- then continue to the next phase
+
+Do not skip verification.
+
+==================================================
+FINAL END-TO-END BEHAVIOR
+==================================================
+
+The completed system must support this scenario:
+
+A dispatcher creates a shipment from Guwahati to Shillong.
+
+A truck and driver are assigned.
+
+The backend requests candidate routes from OpenRouteService.
+
+The backend gathers:
+- route distance
+- baseline duration
+- weather
+- incidents
+- vehicle information
+- historical trip information
+
+The backend sends structured route features to the Python AI service.
+
+The AI returns:
+- predicted duration
+- predicted delay
+- delay probability
+- risk score
+- risk level
+
+The backend ranks the routes.
+
+The backend recommends the safest/best route according to configured business weights.
+
+The frontend displays:
+- route
+- distance
+- baseline ETA
+- predicted ETA
+- expected delay
+- risk level
+- incidents
+- weather
+- recommendation reason
+
+During the trip, the driver sends GPS updates.
+
+The backend:
+- updates current vehicle location
+- stores location history
+- broadcasts location through Socket.IO
+
+If a serious incident occurs near the route:
+- create an alert
+- notify dispatcher/driver
+- optionally recalculate route
+- run prediction again
+- provide a new recommendation
+
+The final architecture must be clean, maintainable, testable and suitable for an SIH demonstration.
+
+Before implementing, inspect the existing project files and preserve useful existing code. Do not unnecessarily rewrite working components.
+
+Start with PHASE 1 only.
