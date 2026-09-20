@@ -27,46 +27,55 @@ export interface AuthSuccessPayload {
   [key: string]: unknown;
 }
 
+export const mapRoleToBackend = (frontendRole?: string): "ADMIN" | "DISPATCHER" | "DRIVER" | "USER" => {
+  if (!frontendRole) return "DISPATCHER";
+  const normalized = frontendRole.trim().toUpperCase();
+  if (normalized === "ADMIN") return "ADMIN";
+  if (normalized === "DISPATCHER" || normalized === "OPERATOR") return "DISPATCHER";
+  if (normalized === "DRIVER" || normalized === "OFFICER") return "DRIVER";
+  if (normalized === "USER") return "USER";
+  return "DISPATCHER";
+};
+
 /**
  * Authentication Service
- * Handles user signin, registration, session termination, and JWT persistence.
+ * Follows the backend authentication contract:
+ * - Login: POST /api/v1/auth/login (alias /auth/login, /auth/signin)
+ * - Register: POST /api/v1/auth/register (alias /auth/register, /auth/signup)
+ * - Sets and accepts HttpOnly cookie 'token' and Authorization: Bearer <jwt>
  */
 export const authApi = {
   /**
-   * Primary sign-in method: sends POST to /auth/signin (with adaptive fallback to /auth/login)
+   * User login: sends { email, password } to backend
    */
   async signin(credentials: AuthCredentials): Promise<AuthSuccessPayload> {
-    // Strictly send only email and password as expected by backend route
     const payload = {
-      email: credentials.email,
-      password: credentials.password
+      email: credentials.email.trim(),
+      password: credentials.password || ""
     };
 
-    // Primary target: /auth/signin, fallback: /auth/login if route does not exist
-    let rawResponse: unknown;
-    try {
-      const res = await apiClient.post<AuthSuccessPayload>("/auth/signin", payload);
-      rawResponse = res.data;
-    } catch (err: unknown) {
-      if (axios.isAxiosError(err)) {
-        // If route does not exist (404 with HTML / Cannot POST), attempt /auth/login
-        const isRouteNotFound =
-          err.response?.status === 404 &&
-          typeof err.response?.data === "string" &&
-          err.response.data.includes("Cannot POST");
+    const endpoints = ["/api/v1/auth/login", "/auth/login", "/api/v1/auth/signin", "/auth/signin"];
+    let rawResponse: unknown = null;
+    let lastError: unknown = null;
 
-        if (isRouteNotFound) {
-          const fallbackRes = await apiClient.post<AuthSuccessPayload>("/auth/login", payload);
-          rawResponse = fallbackRes.data;
-        } else {
-          throw err;
+    for (const ep of endpoints) {
+      try {
+        const res = await apiClient.post<AuthSuccessPayload>(ep, payload);
+        rawResponse = res.data;
+        break;
+      } catch (err: unknown) {
+        lastError = err;
+        if (axios.isAxiosError(err) && err.response?.status === 404) {
+          continue; // Try next alias if route is 404
         }
-      } else {
-        throw err;
+        throw err; // Real validation/credential error
       }
     }
 
-    // Extract token from various standard backend response structures
+    if (!rawResponse && lastError) {
+      throw lastError;
+    }
+
     const data = (rawResponse && typeof rawResponse === "object" && "data" in rawResponse
       ? (rawResponse as { data: AuthSuccessPayload }).data
       : rawResponse) as AuthSuccessPayload;
@@ -94,26 +103,51 @@ export const authApi = {
   },
 
   /**
-   * Sign-up / Register user: sends POST to /auth/signup (with adaptive fallback to /auth/register)
+   * User registration: sends { name, email, password, role, phone } to backend
+   * All 5 fields are strictly required by the backend controller.
    */
-  async signup(data: RegisterUserData): Promise<unknown> {
-    try {
-      const res = await apiClient.post("/auth/signup", data);
-      return res.data;
-    } catch (err: unknown) {
-      if (axios.isAxiosError(err)) {
-        const isRouteNotFound =
-          err.response?.status === 404 &&
-          typeof err.response?.data === "string" &&
-          err.response.data.includes("Cannot POST");
+  async signup(data: RegisterUserData): Promise<AuthSuccessPayload> {
+    const backendRole = mapRoleToBackend(data.role);
+    const payload = {
+      name: data.name.trim(),
+      email: data.email.trim(),
+      password: data.password || "",
+      role: backendRole,
+      phone: data.phone ? data.phone.trim() : "9876543210"
+    };
 
-        if (isRouteNotFound) {
-          const res = await apiClient.post("/auth/register", data);
-          return res.data;
+    const endpoints = ["/api/v1/auth/register", "/auth/register", "/api/v1/auth/signup", "/auth/signup"];
+    let rawResponse: unknown = null;
+    let lastError: unknown = null;
+
+    for (const ep of endpoints) {
+      try {
+        const res = await apiClient.post<AuthSuccessPayload>(ep, payload);
+        rawResponse = res.data;
+        break;
+      } catch (err: unknown) {
+        lastError = err;
+        if (axios.isAxiosError(err) && err.response?.status === 404) {
+          continue;
         }
+        throw err;
       }
-      throw err;
     }
+
+    if (!rawResponse && lastError) {
+      throw lastError;
+    }
+
+    const resData = (rawResponse && typeof rawResponse === "object" && "data" in rawResponse
+      ? (rawResponse as { data: AuthSuccessPayload }).data
+      : rawResponse) as AuthSuccessPayload;
+
+    const token = resData?.token || (typeof resData?.data === "object" && resData?.data && "token" in resData.data ? (resData.data as { token?: string }).token : undefined);
+    if (token && typeof token === "string") {
+      localStorage.setItem("ner_auth_token", token);
+    }
+
+    return resData;
   },
 
   /**
@@ -121,11 +155,6 @@ export const authApi = {
    */
   async logout(): Promise<void> {
     localStorage.removeItem("ner_auth_token");
-    try {
-      await apiClient.post("/auth/logout", {});
-    } catch {
-      // Best-effort logout notification
-    }
   },
 
   /**

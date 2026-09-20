@@ -8,10 +8,10 @@ export const DataSourceBadge: React.FC = () => {
 
   return (
     <>
-      {/* <button 
+      <button 
         type="button"
         onClick={() => setIsModalOpen(true)}
-        className="hidden inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold tracking-wide border transition-all cursor-pointer hover:shadow-xs active:scale-95"
+        className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold tracking-wide border transition-all cursor-pointer hover:shadow-xs active:scale-95"
         style={{
           backgroundColor: sourceType === "live" ? "#e6f4ea" : "#f1f4fa",
           borderColor: sourceType === "live" ? "#34a853" : "#c2c7cf",
@@ -29,9 +29,9 @@ export const DataSourceBadge: React.FC = () => {
             backgroundColor: sourceType === "live" ? "#137333" : "#72777f"
           }}
         />
-        <span className="hidden">{sourceType === "live" ? "Live Data" : "Mock Data"}</span>
+        <span>{sourceType === "live" ? "Live Data" : "Mock Data"}</span>
         <span className="material-symbols-outlined text-[13px] opacity-60">tune</span>
-      </button> */}
+      </button>
 
       {isModalOpen && (
         <BackendConnectionModal

@@ -8,11 +8,16 @@ import { shipmentApi } from "@/services/api/apiClient";
 
 export const DeliveriesPage: React.FC = () => {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [fetchError, setFetchError] = useState<string | null>(null);
+
   const shipments = useShipmentStore((s) => s.shipments);
   const setShipments = useShipmentStore((s) => s.setShipments);
   const selectShipment = useShipmentStore((s) => s.selectShipment);
 
   const loadShipments = useCallback(async () => {
+    setIsLoading(true);
+    setFetchError(null);
     try {
       const list = await shipmentApi.getAll();
       if (list && list.length > 0) {
@@ -20,12 +25,31 @@ export const DeliveriesPage: React.FC = () => {
       }
     } catch (err) {
       console.warn("Could not fetch shipments from backend on DeliveriesPage:", err);
+      setFetchError("Unable to load latest shipments from backend. Displaying offline snapshot.");
+    } finally {
+      setIsLoading(false);
     }
   }, [setShipments]);
 
   useEffect(() => {
-    loadShipments();
-  }, [loadShipments]);
+    let active = true;
+    shipmentApi.getAll()
+      .then((list) => {
+        if (active && list && list.length > 0) {
+          setShipments(list);
+        }
+      })
+      .catch((err) => {
+        console.warn("Could not fetch shipments from backend on DeliveriesPage:", err);
+        if (active) {
+          setFetchError("Unable to load latest shipments from backend. Displaying offline snapshot.");
+        }
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [setShipments]);
 
   const atRiskCount = shipments.filter((s) => s.status === "at_risk").length;
   const onTimeCount = shipments.filter((s) => s.status === "on_time").length;
@@ -112,6 +136,28 @@ export const DeliveriesPage: React.FC = () => {
             {deliveredCount} completed deliveries this shift
           </span>
         </div>
+        {/* Loading / Error Indicators */}
+        {fetchError && (
+          <div className="flex items-center justify-between bg-amber-50 border border-amber-200 text-amber-800 px-4 py-2.5 rounded-xl text-xs">
+            <div className="flex items-center gap-2">
+              <span className="material-symbols-outlined text-[18px] text-amber-600 shrink-0">info</span>
+              <span>{fetchError}</span>
+            </div>
+            <button
+              type="button"
+              onClick={loadShipments}
+              className="text-xs font-semibold text-amber-900 underline hover:no-underline cursor-pointer shrink-0 ml-3"
+            >
+              Retry Sync
+            </button>
+          </div>
+        )}
+        {isLoading && (
+          <div className="flex items-center gap-2 bg-sky-50 border border-sky-200 text-sky-800 px-4 py-2.5 rounded-xl text-xs animate-pulse">
+            <span className="material-symbols-outlined text-[18px] text-sky-600 animate-spin shrink-0">sync</span>
+            <span>Syncing consignments from backend...</span>
+          </div>
+        )}
       </div>
 
       {/* Main Split Layout: Consignments Table + Route Comparison */}

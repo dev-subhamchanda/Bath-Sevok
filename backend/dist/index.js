@@ -20,8 +20,12 @@ app.use(morgan('dev'));
 app.use(cookieParser());
 app.use(express.json());
 // app.use(cookieParser());
+<<<<<<< HEAD
 // app.use(cors({ origin: clientOrigin ?? '*', credentials: true }));
 app.use(cors());
+=======
+app.use(cors({ origin: clientOrigin ?? '*', credentials: true }));
+>>>>>>> 1cf65897f23963638a35b6830d15f0318b67ed1e
 app.use(express.urlencoded({ extended: true }));
 app.get('/', (req, res) => {
     res.json({

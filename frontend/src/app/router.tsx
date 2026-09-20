@@ -1,23 +1,20 @@
 import { createBrowserRouter, Navigate } from "react-router-dom";
 import { AppShell } from "@/components/layout/AppShell";
 import { ProtectedRoute, PublicOnlyRoute } from "./router/RouteGuards";
-import { DashboardPage } from "@/pages/Dashboard/DashboardPage";
-import { FleetPage } from "@/pages/Fleet/FleetPage";
-import { DeliveriesPage } from "@/pages/Fleet/DeliveriesPage";
-import { IncidentsAlertsPage } from "@/pages/IncidentsAlerts/IncidentsAlertsPage";
-import { AnalyticsPage } from "@/pages/Analytics/AnalyticsPage";
-import { FieldReportingPage } from "@/pages/IncidentsAlerts/FieldReportingPage";
-import { LoginPage } from "@/pages/Login/LoginPage";
-import { SettingsPage } from "@/pages/Settings/SettingsPage";
 
 export const router = createBrowserRouter([
   {
     path: "/login",
-    element: (
-      <PublicOnlyRoute>
-        <LoginPage />
-      </PublicOnlyRoute>
-    )
+    lazy: async () => {
+      const { LoginPage } = await import("@/pages/Login/LoginPage");
+      return {
+        Component: () => (
+          <PublicOnlyRoute>
+            <LoginPage />
+          </PublicOnlyRoute>
+        )
+      };
+    }
   },
   {
     path: "/role-selection",
@@ -33,55 +30,94 @@ export const router = createBrowserRouter([
     children: [
       {
         index: true,
-        element: <DashboardPage />
+        lazy: async () => {
+          const { DashboardPage } = await import("@/pages/Dashboard/DashboardPage");
+          return { Component: DashboardPage };
+        }
       },
       {
         path: "dashboard",
-        element: <DashboardPage />
+        lazy: async () => {
+          const { DashboardPage } = await import("@/pages/Dashboard/DashboardPage");
+          return { Component: DashboardPage };
+        }
       },
       {
         path: "command-center",
-        element: <DashboardPage />
+        lazy: async () => {
+          const { DashboardPage } = await import("@/pages/Dashboard/DashboardPage");
+          return { Component: DashboardPage };
+        }
       },
       {
         path: "fleet",
-        element: <FleetPage />
+        lazy: async () => {
+          const { FleetPage } = await import("@/pages/Fleet/FleetPage");
+          return { Component: FleetPage };
+        }
       },
       {
         path: "operations",
-        element: <FleetPage />
+        lazy: async () => {
+          const { FleetPage } = await import("@/pages/Fleet/FleetPage");
+          return { Component: FleetPage };
+        }
       },
       {
         path: "deliveries",
-        element: <DeliveriesPage />
+        lazy: async () => {
+          const { DeliveriesPage } = await import("@/pages/Fleet/DeliveriesPage");
+          return { Component: DeliveriesPage };
+        }
       },
       {
         path: "incidents",
-        element: <IncidentsAlertsPage initialTab="incidents" key="incidents-screen" />
+        lazy: async () => {
+          const { IncidentsAlertsPage } = await import("@/pages/IncidentsAlerts/IncidentsAlertsPage");
+          return { Component: () => <IncidentsAlertsPage initialTab="incidents" key="incidents-screen" /> };
+        }
       },
       {
         path: "alerts",
-        element: <IncidentsAlertsPage initialTab="alerts" key="alerts-screen" />
+        lazy: async () => {
+          const { IncidentsAlertsPage } = await import("@/pages/IncidentsAlerts/IncidentsAlertsPage");
+          return { Component: () => <IncidentsAlertsPage initialTab="alerts" key="alerts-screen" /> };
+        }
       },
       {
         path: "incidents-alerts",
-        element: <IncidentsAlertsPage key="incidents-alerts-screen" />
+        lazy: async () => {
+          const { IncidentsAlertsPage } = await import("@/pages/IncidentsAlerts/IncidentsAlertsPage");
+          return { Component: () => <IncidentsAlertsPage key="incidents-alerts-screen" /> };
+        }
       },
       {
         path: "analytics",
-        element: <AnalyticsPage />
+        lazy: async () => {
+          const { AnalyticsPage } = await import("@/pages/Analytics/AnalyticsPage");
+          return { Component: AnalyticsPage };
+        }
       },
       {
         path: "field",
-        element: <FieldReportingPage />
+        lazy: async () => {
+          const { FieldReportingPage } = await import("@/pages/IncidentsAlerts/FieldReportingPage");
+          return { Component: FieldReportingPage };
+        }
       },
       {
         path: "report-incident",
-        element: <FieldReportingPage />
+        lazy: async () => {
+          const { FieldReportingPage } = await import("@/pages/IncidentsAlerts/FieldReportingPage");
+          return { Component: FieldReportingPage };
+        }
       },
       {
         path: "settings",
-        element: <SettingsPage />
+        lazy: async () => {
+          const { SettingsPage } = await import("@/pages/Settings/SettingsPage");
+          return { Component: SettingsPage };
+        }
       },
       {
         path: "*",

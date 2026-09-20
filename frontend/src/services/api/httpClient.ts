@@ -5,7 +5,8 @@ import { getApiConfig } from "../apiConfig";
  * Centralized Axios instance for all NER Logistics API requests.
  */
 export const apiClient: AxiosInstance = axios.create({
-  timeout: 8000,
+  timeout: 12000,
+  withCredentials: true,
   headers: {
     "Content-Type": "application/json",
     Accept: "application/json"
@@ -15,24 +16,32 @@ export const apiClient: AxiosInstance = axios.create({
 // Dynamic BaseURL & Auth Request Interceptor
 apiClient.interceptors.request.use(
   (config) => {
+    // Ensure credentials (cookies) are transmitted
+    config.withCredentials = true;
+
     // When running in the browser on the Vite dev server (port 3000),
-    // route requests through the local dev server proxy to completely eliminate CORS OPTIONS preflight requests!
+    // route requests through the local dev server proxy to avoid CORS preflight issues
     if (!config.baseURL) {
-      if (typeof window !== "undefined" && (window.location.port === "3000" || window.location.hostname === "localhost")) {
+      const isLocalDev =
+        typeof window !== "undefined" &&
+        (window.location.hostname === "localhost" ||
+          window.location.hostname === "127.0.0.1" ||
+          window.location.port === "3000" ||
+          window.location.port === "4173");
+
+      if (isLocalDev) {
         config.baseURL = "";
       } else {
         config.baseURL = getApiConfig().httpUrl;
       }
     }
 
-    // Do NOT inject auth tokens on auth routes (/auth/signin, /auth/signup) to keep requests lightweight
-    const isAuthRoute = typeof config.url === "string" && config.url.includes("/auth");
+    // Attach JWT Bearer token if present
+    const isAuthRoute = typeof config.url === "string" && (config.url.includes("/auth/signin") || config.url.includes("/auth/login") || config.url.includes("/auth/register") || config.url.includes("/auth/signup"));
     if (!isAuthRoute) {
       const token = localStorage.getItem("ner_auth_token");
       if (token && config.headers) {
         config.headers.Authorization = `Bearer ${token}`;
-        config.headers["x-access-token"] = token;
-        config.headers.token = token;
       }
     }
 

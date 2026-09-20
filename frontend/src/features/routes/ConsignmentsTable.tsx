@@ -116,8 +116,15 @@ export const ConsignmentsTable: React.FC<ConsignmentsTableProps> = ({ onOpenCrea
 
       {/* Mobile Consignment Card Feed */}
       <div className="flex flex-col gap-3 md:hidden">
-        {filteredShipments.map((shp) => {
-          const isSelected = selectedShipmentId === shp.id;
+        {filteredShipments.length === 0 ? (
+          <div className="p-8 bg-white rounded-2xl border border-slate-200 text-center flex flex-col items-center gap-2">
+            <span className="material-symbols-outlined text-3xl text-slate-400">inventory_2</span>
+            <p className="text-xs font-semibold text-slate-700">No consignments found</p>
+            <p className="text-[11px] text-slate-400">Try adjusting your filters or dispatch a new consignment.</p>
+          </div>
+        ) : (
+          filteredShipments.map((shp) => {
+            const isSelected = selectedShipmentId === shp.id;
           const isAtRisk = shp.status === "at_risk" || shp.status === "delayed";
 
           return (
@@ -198,7 +205,8 @@ export const ConsignmentsTable: React.FC<ConsignmentsTableProps> = ({ onOpenCrea
               </div>
             </div>
           );
-        })}
+        })
+      )}
       </div>
 
       {/* Desktop & Tablet Consignments Data Table */}
@@ -217,6 +225,7 @@ export const ConsignmentsTable: React.FC<ConsignmentsTableProps> = ({ onOpenCrea
               </tr>
             </thead>
             <tbody className="divide-y divide-[#e5e8ee]">
+<<<<<<< HEAD
               {filteredShipments.length === 0 && (
                 <tr>
                   <td colSpan={7} className="py-12 px-4 text-center text-xs text-[#72777f]">
@@ -226,6 +235,22 @@ export const ConsignmentsTable: React.FC<ConsignmentsTableProps> = ({ onOpenCrea
                 </tr>
               )}
               {filteredShipments.map((shp) => {
+=======
+              {filteredShipments.length === 0 ? (
+                <tr>
+                  <td colSpan={8} className="py-12 px-4 text-center">
+                    <div className="flex flex-col items-center justify-center gap-2 text-slate-500">
+                      <span className="material-symbols-outlined text-4xl text-slate-400">inventory_2</span>
+                      <p className="text-sm font-semibold text-slate-700">No consignments found</p>
+                      <p className="text-xs text-slate-400 max-w-sm">
+                        No shipments match the selected filter criteria or no active shipments have been dispatched yet.
+                      </p>
+                    </div>
+                  </td>
+                </tr>
+              ) : (
+                filteredShipments.map((shp) => {
+>>>>>>> 1cf65897f23963638a35b6830d15f0318b67ed1e
                 const isSelected = selectedShipmentId === shp.id;
 
                 return (
@@ -311,7 +336,8 @@ export const ConsignmentsTable: React.FC<ConsignmentsTableProps> = ({ onOpenCrea
                     </td>
                   </tr>
                 );
-              })}
+              })
+            )}
             </tbody>
           </table>
         </div>

@@ -85,10 +85,9 @@ export const BackendConnectionModal: React.FC<BackendConnectionModalProps> = ({
   };
 
   const presets = [
-    { label: "Live DevTunnel (5000)", url: "https://1wcg1sk4-5000.inc1.devtunnels.ms" },
-    { label: "Team LAN Server (5000)", url: "http://10.215.235.233:5000" },
-    { label: "Local Backend (8000)", url: "http://localhost:8000" },
-    { label: "Local Flask / Express (5000)", url: "http://localhost:5000" }
+    { label: "Production Cloud Server (Render)", url: "https://bath-sevok-server-nlbg.onrender.com" },
+    { label: "Local Express Backend (3001)", url: "http://localhost:3001" },
+    { label: "Local Dev Proxy (Port 3000)", url: "http://localhost:3000" }
   ];
 
   return (

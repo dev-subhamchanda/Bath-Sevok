@@ -1,6 +1,7 @@
 import { Shipment } from '../../models/shipment.model.js';
 import { Driver } from '../../models/driver.model.js';
 import { Vehicle } from '../../models/vehicle.model.js';
+import { User } from '../../models/auth.model.js';
 import { uploadShipmentImage } from '../../config/cloudinary.js';
 import { getVehicleLocation } from '../vehicles/vehicle-location.service.js';
 import mongoose from 'mongoose';
@@ -77,10 +78,54 @@ const createShipment = async (req, res) => {
             res.status(400).json({ message: 'route must include distanceKm and durationMinutes from the alternatives endpoint' });
             return;
         }
+<<<<<<< HEAD
         const [vehicle, driver] = await Promise.all([
             mongoose.isValidObjectId(vehicleId) ? Vehicle.findById(vehicleId) : null,
             mongoose.isValidObjectId(driverId) ? Driver.findById(driverId) : null,
         ]);
+=======
+        let targetVehicleId = vehicleId;
+        let targetDriverId = driverId;
+        let [vehicle, driver] = await Promise.all([
+            mongoose.isValidObjectId(targetVehicleId) ? Vehicle.findById(targetVehicleId) : null,
+            mongoose.isValidObjectId(targetDriverId) ? Driver.findById(targetDriverId) : null,
+        ]);
+        if (!vehicle) {
+            vehicle = await Vehicle.findOne();
+            if (!vehicle) {
+                vehicle = await Vehicle.create({
+                    vehicleNumber: 'AS-01-AX-1029',
+                    type: 'Tata Prima 4028.S (Heavy Multi-Axle)',
+                    capacityKg: 10000,
+                    status: 'AVAILABLE',
+                });
+            }
+            targetVehicleId = vehicle._id;
+        }
+        if (!driver) {
+            driver = await Driver.findOne();
+            if (!driver) {
+                let driverUser = await User.findOne({ role: 'DRIVER' });
+                if (!driverUser) {
+                    driverUser = await User.create({
+                        name: 'T. Sangma',
+                        email: `driver-${Date.now()}@nerlogistics.in`,
+                        passwordHash: 'seeded_hash',
+                        role: 'DRIVER',
+                        status: 'ACTIVE',
+                        phone: '+91 94361 78921',
+                    });
+                }
+                driver = await Driver.create({
+                    userId: driverUser._id,
+                    licenseNumber: `DL-NER-${Date.now().toString().slice(-6)}`,
+                    phone: '+91 94361 78921',
+                    status: 'AVAILABLE',
+                });
+            }
+            targetDriverId = driver._id;
+        }
+>>>>>>> 1cf65897f23963638a35b6830d15f0318b67ed1e
         if (typeof parsedWeightKg !== 'number' || !Number.isFinite(parsedWeightKg) || parsedWeightKg < 0) {
             res.status(400).json({ message: 'weightKg must be a non-negative number' });
             return;
@@ -102,6 +147,7 @@ const createShipment = async (req, res) => {
             imagePublicId: upload.publicId,
             origin,
             destination,
+<<<<<<< HEAD
             ...(vehicle ? { vehicleId: vehicle._id } : {}),
             ...(driver ? { driverId: driver._id } : {}),
             routeId: mongoose.isValidObjectId(routeId) ? routeId : undefined,
@@ -110,6 +156,15 @@ const createShipment = async (req, res) => {
             priority,
             expectedDelivery: deliveryDate,
             ...(parsedStatus ? { status: parsedStatus } : {}),
+=======
+            vehicleId: targetVehicleId,
+            driverId: targetDriverId,
+            routeId: mongoose.isValidObjectId(routeId) ? routeId : undefined,
+            route,
+            weightKg: parsedWeightKg,
+            priority: priority || 'NORMAL',
+            expectedDelivery,
+>>>>>>> 1cf65897f23963638a35b6830d15f0318b67ed1e
         });
         const populatedShipment = await shipment.populate([
             { path: 'driverId', select: '-__v' },

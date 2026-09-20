@@ -166,7 +166,7 @@ export const routeAlternativesApi = {
   ): Promise<RouteAlternativesApiResponse> {
     return postAdaptive<RouteAlternativesApiResponse>(
       "/routes/alternatives",
-      "/api/routes/alternatives",
+      "/api/v1/routes/alternatives",
       body,
       config
     );

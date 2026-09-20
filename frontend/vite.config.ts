@@ -10,7 +10,11 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url))
 // https://vite.dev/config/
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '')
-  const apiBaseUrl = env.VITE_API_BASE_URL
+  const apiBaseUrl =
+    env.VITE_API_URL ||
+    env.VITE_API_BASE_URL ||
+    env.VITE_API_BACKEND_URL ||
+    'https://bath-sevok-server-nlbg.onrender.com'
 
   return {
     plugins: [
