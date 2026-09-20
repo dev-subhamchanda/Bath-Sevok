@@ -6,7 +6,7 @@ import axios from "axios";
  * localStorage overrides, and backend reachability testing.
  */
 
-const STORAGE_KEY_API_URL = "ner_logistics_backend_url";
+const STORAGE_KEY_API_URL = "ner_logistics_source_url";
 const STORAGE_KEY_SOURCE_TYPE = "ner_logistics_source_type";
 
 export interface ApiConnectionConfig {
