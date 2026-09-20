@@ -29,7 +29,7 @@ export const DataSourceBadge: React.FC = () => {
             backgroundColor: sourceType === "live" ? "#137333" : "#72777f"
           }}
         />
-        <span>{sourceType === "live" ? "Live Data" : "Mock Data"}</span>
+        <span className="hidden">{sourceType === "live" ? "Live Data" : "Mock Data"}</span>
         <span className="material-symbols-outlined text-[13px] opacity-60">tune</span>
       </button>
 
