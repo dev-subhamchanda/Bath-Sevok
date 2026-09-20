@@ -1,9 +1,10 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useIncidentStore } from "@/stores/incidentStore";
 import { useAlertStore } from "@/stores/alertStore";
 import { useUiStore } from "@/stores/uiStore";
 import { KpiCard } from "@/components/common/KpiCard";
 import { StatusBadge } from "@/components/common/StatusBadge";
+import { incidentApi } from "@/services/api/apiClient";
 
 export const IncidentsAlertsPage: React.FC<{ initialTab?: "incidents" | "alerts" }> = ({
   initialTab = "incidents"
@@ -12,8 +13,26 @@ export const IncidentsAlertsPage: React.FC<{ initialTab?: "incidents" | "alerts"
   const [alertFilter, setAlertFilter] = useState<"all" | "weather" | "blockade" | "load_cap">("all");
 
   const incidents = useIncidentStore((s) => s.incidents);
+  const setIncidents = useIncidentStore((s) => s.setIncidents);
   const selectedIncidentId = useIncidentStore((s) => s.selectedIncidentId);
   const selectIncident = useIncidentStore((s) => s.selectIncident);
+
+  useEffect(() => {
+    let active = true;
+    incidentApi.getAll()
+      .then((liveList) => {
+        if (active && liveList && liveList.length > 0) {
+          setIncidents(liveList);
+        }
+      })
+      .catch((err) => {
+        console.warn("Could not load backend incidents:", err);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [setIncidents]);
 
   const alerts = useAlertStore((s) => s.alerts);
   const acknowledgeAlert = useAlertStore((s) => s.acknowledgeAlert);

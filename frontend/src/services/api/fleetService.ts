@@ -36,6 +36,24 @@ export const vehicleApi = {
 
     const d = await getAdaptive<Vehicle[] | { data: Vehicle[] }>("/vehicles", "/api/vehicles", config).catch(() => []);
     return (Array.isArray(d) ? d : (d as { data: Vehicle[] })?.data || []) as Vehicle[];
+  },
+
+  /**
+   * Get current live vehicle location via GET /api/v1/vehicles/:vehicleId/location
+   */
+  async getLocation(
+    vehicleId: string,
+    config?: AxiosRequestConfig
+  ): Promise<{ location?: { vehicleId: string; latitude: number; longitude: number; speedKmh: number; heading: number; updatedAt: string } } | null> {
+    try {
+      return await getAdaptive<{ location?: { vehicleId: string; latitude: number; longitude: number; speedKmh: number; heading: number; updatedAt: string } }>(
+        `/api/v1/vehicles/${vehicleId}/location`,
+        `/vehicles/${vehicleId}/location`,
+        config
+      );
+    } catch {
+      return null;
+    }
   }
 };
 
