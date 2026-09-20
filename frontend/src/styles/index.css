@@ -1,0 +1,212 @@
+@import "tailwindcss";
+@import "leaflet/dist/leaflet.css";
+
+@theme {
+  --color-primary: #003356;
+  --color-primary-container: #174a73;
+  --color-on-primary: #ffffff;
+  --color-on-primary-container: #8ebae9;
+  --color-secondary: #27638c;
+  --color-secondary-container: #99cffe;
+  --color-on-secondary: #ffffff;
+  --color-on-secondary-container: #195981;
+  --color-tertiary: #003832;
+  --color-tertiary-container: #005148;
+  --color-on-tertiary-container: #66c6b7;
+  --color-surface: #f7f9ff;
+  --color-surface-dim: #d7dae0;
+  --color-surface-bright: #f7f9ff;
+  --color-surface-container-lowest: #ffffff;
+  --color-surface-container-low: #f1f4fa;
+  --color-surface-container: #ebeef4;
+  --color-surface-container-high: #e5e8ee;
+  --color-surface-container-highest: #dfe3e8;
+  --color-on-surface: #181c20;
+  --color-on-surface-variant: #42474e;
+  --color-outline: #72777f;
+  --color-outline-variant: #c2c7cf;
+  --color-error: #ba1a1a;
+  --color-error-container: #ffdad6;
+  --color-on-error-container: #93000a;
+  --color-background: #f7f9ff;
+
+  --font-sans: 'Roboto Flex', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-label: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+}
+
+@layer base {
+  html, body {
+    margin: 0;
+    padding: 0;
+    font-family: var(--font-sans);
+    background-color: #f7f9ff;
+    color: #181c20;
+    -webkit-tap-highlight-color: transparent;
+  }
+}
+
+/* Safe Area Inset Support (Stitch Mobile Spec) */
+.pb-safe {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+.pt-safe {
+  padding-top: env(safe-area-inset-top, 0px);
+}
+.min-touch-target {
+  min-height: 44px;
+  min-width: 44px;
+}
+
+/* Material Symbols Outlined Icon Helper */
+.material-symbols-outlined {
+  font-family: 'Material Symbols Outlined';
+  font-weight: normal;
+  font-style: normal;
+  font-size: 24px;
+  line-height: 1;
+  letter-spacing: normal;
+  text-transform: none;
+  display: inline-block;
+  white-space: nowrap;
+  word-wrap: normal;
+  direction: ltr;
+  -webkit-font-feature-settings: 'liga';
+  -webkit-font-smoothing: antialiased;
+}
+
+/* =========================================================================
+   DASHBOARD HOVER ELEVATION ANIMATIONS (OVER-MAP FLOATING ELEMENTS)
+   Specs:
+   - Upward lift: 2–4px (translateY(-3px))
+   - Shadow: subtle soft elevation expansion
+   - Scale: very subtle 1.01–1.02 (scale(1.015))
+   - Smooth 150–200ms transition (180ms ease-out)
+   - Professional, restrained, zero bounce/glow
+   - Touch devices: pressed state (:active) without hover stickiness
+   - prefers-reduced-motion: fully respected
+   ========================================================================= */
+
+.map-floating-element {
+  will-change: transform, box-shadow;
+  transition: transform 180ms cubic-bezier(0.16, 1, 0.3, 1),
+              box-shadow 180ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .map-floating-element:hover {
+    transform: translateY(-3px) scale(1.015);
+    box-shadow: 0 12px 28px -4px rgba(24, 28, 32, 0.12),
+                0 4px 10px -2px rgba(24, 28, 32, 0.06);
+  }
+}
+
+/* Touch devices pressed state */
+@media (hover: none) {
+  .map-floating-element:active {
+    transform: scale(0.99);
+    box-shadow: 0 2px 6px rgba(24, 28, 32, 0.08);
+  }
+}
+
+/* Respect user's motion preferences */
+@media (prefers-reduced-motion: reduce) {
+  .map-floating-element,
+  .map-floating-element:hover,
+  .map-floating-element:active {
+    transform: none !important;
+    transition: none !important;
+  }
+  * {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #f1f4fa;
+}
+::-webkit-scrollbar-thumb {
+  background: #c2c7cf;
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #72777f;
+}
+
+/* =========================================================================
+   LEAFLET & OPENSTREETMAP MODERN CUSTOM STYLING
+   ========================================================================= */
+
+.leaflet-container {
+  font-family: var(--font-sans);
+  width: 100%;
+  height: 100%;
+  background: #f1f5f9;
+  z-index: 0;
+}
+
+/* Clean Custom Popup */
+.leaflet-popup-content-wrapper {
+  background: rgba(255, 255, 255, 0.98);
+  backdrop-filter: blur(8px);
+  border-radius: 16px;
+  box-shadow: 0 10px 25px -5px rgba(0, 51, 86, 0.15), 0 8px 10px -6px rgba(0, 51, 86, 0.1);
+  border: 1px solid rgba(226, 232, 240, 0.85);
+  padding: 0;
+  overflow: hidden;
+}
+
+.leaflet-popup-content {
+  margin: 0;
+  line-height: 1.4;
+}
+
+.leaflet-popup-tip-container {
+  display: none;
+}
+
+.leaflet-container a.leaflet-popup-close-button {
+  top: 8px;
+  right: 8px;
+  padding: 4px;
+  width: 20px;
+  height: 20px;
+  border-radius: 6px;
+  color: #64748b;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  transition: all 0.15s ease;
+}
+
+.leaflet-container a.leaflet-popup-close-button:hover {
+  background: #f1f5f9;
+  color: #0f172a;
+}
+
+/* Discreet Attribution */
+.leaflet-control-attribution {
+  background: rgba(255, 255, 255, 0.75) !important;
+  backdrop-filter: blur(4px);
+  padding: 2px 8px !important;
+  font-size: 10px !important;
+  color: #64748b !important;
+  border-top-left-radius: 8px;
+}
+
+.leaflet-control-attribution a {
+  color: #003356 !important;
+  text-decoration: none;
+}
+
+.leaflet-control-attribution a:hover {
+  text-decoration: underline;
+}
+
