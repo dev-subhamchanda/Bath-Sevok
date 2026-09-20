@@ -1,1 +1,1 @@
-{"version":3,"file":"vehicles.route.d.ts","sourceRoot":"","sources":["../../../src/modules/vehicles/vehicles.route.ts"],"names":[],"mappings":"AAIA,QAAA,MAAM,MAAM,4CAAW,CAAC;AAKxB,OAAO,EAAE,MAAM,IAAI,cAAc,EAAE,CAAC"}
+{"version":3,"file":"vehicles.route.d.ts","sourceRoot":"","sources":["../../../src/modules/vehicles/vehicles.route.ts"],"names":[],"mappings":"AAKA,QAAA,MAAM,MAAM,4CAAW,CAAC;AAMxB,OAAO,EAAE,MAAM,IAAI,cAAc,EAAE,CAAC"}

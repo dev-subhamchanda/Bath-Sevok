@@ -50,6 +50,9 @@ export interface CreateShipmentInput {
   driverPhotoUrl?: string;
   vehicleNumber?: string;
   vehicleType?: string;
+  status?: "PENDING" | "ASSIGNED" | "IN_TRANSIT" | "DELIVERED" | "CANCELLED";
+  vehicleUnit?: "heavy" | "light" | "moderate";
+  fleetClassification?: "transit";
   pickupTimeIso?: string;
   expectedDeliveryIso?: string;
   receiverContact?: string;
@@ -281,7 +284,6 @@ export const shipmentApi = {
     const photoBlob = input.driverPhoto || input.image;
     if (photoBlob && photoBlob instanceof Blob) {
       const fileName = (photoBlob as File).name || "driver_photo.jpg";
-      formData.append("driverPhoto", photoBlob, fileName);
       formData.append("image", photoBlob, fileName);
     } else {
       // 1x1 transparent pixel fallback if no image attached
@@ -289,7 +291,6 @@ export const shipmentApi = {
         "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAA=";
       try {
         const pixelBlob = await fetch(transparentPixel).then((r) => r.blob());
-        formData.append("driverPhoto", pixelBlob, "driver_photo.png");
         formData.append("image", pixelBlob, "consignment.png");
       } catch {
         // Fallback
@@ -298,6 +299,15 @@ export const shipmentApi = {
 
     // Required fields per backend specifications
     formData.append("loadType", input.loadType || input.commodity || "Critical Medical Supplies");
+      if (input.trackingNumber) {
+        formData.append("trackingNumber", input.trackingNumber);
+      }
+      if (input.status) {
+        formData.append("status", input.status);
+      }
+      if (input.expectedDeliveryIso) {
+        formData.append("expectedDelivery", input.expectedDeliveryIso);
+      }
     formData.append("weightKg", String(input.weightKg || 1200));
     formData.append("priority", priorityLabel);
     if (input.routeId) {
@@ -324,6 +334,8 @@ export const shipmentApi = {
     if (input.driverLicenseId) {
       formData.append("driverLicenseId", input.driverLicenseId);
     }
+    formData.append("vehicleUnit", input.vehicleUnit || "moderate");
+    formData.append("fleetClassification", input.fleetClassification || "transit");
 
     // 3. Dispatch to POST /api/v1/shipments/create (with fallback to /shipments/create)
     let createdRaw: unknown = null;
@@ -343,7 +355,12 @@ export const shipmentApi = {
         break;
       } catch (err: unknown) {
         lastError = err;
-        if (axios.isAxiosError(err) && err.response?.status === 404) {
+        const responseData = axios.isAxiosError(err) ? err.response?.data : undefined;
+        const isRouteNotFound =
+          axios.isAxiosError(err) &&
+          err.response?.status === 404 &&
+          (!responseData || typeof responseData !== "object" || !("message" in responseData));
+        if (isRouteNotFound) {
           continue; // Try next endpoint spelling if 404
         }
         // If server rejected with 400 or other validation status, rethrow immediately

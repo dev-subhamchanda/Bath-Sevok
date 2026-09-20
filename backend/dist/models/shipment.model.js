@@ -11,6 +11,8 @@ const shipmentSchema = new mongoose.Schema({
     origin: { type: geoPointSchema, required: true },
     destination: { type: geoPointSchema, required: true },
     loadType: { type: String, required: true, trim: true },
+    vehicleUnit: { type: String, enum: ['heavy', 'light', 'moderate'], required: true },
+    fleetClassification: { type: String, enum: ['transit'], required: true },
     imageUrl: { type: String, required: true, trim: true },
     imagePublicId: { type: String, required: true, trim: true },
     vehicleId: { type: mongoose.Schema.Types.ObjectId, ref: 'Vehicle' },
@@ -21,7 +23,6 @@ const shipmentSchema = new mongoose.Schema({
     priority: { type: String, enum: ['LOW', 'NORMAL', 'HIGH', 'URGENT'], default: 'NORMAL', required: true },
     status: { type: String, enum: ['PENDING', 'ASSIGNED', 'IN_TRANSIT', 'DELIVERED', 'CANCELLED'], default: 'PENDING', required: true },
     expectedDelivery: { type: Date },
-    actualDelivery: { type: Date },
 }, { timestamps: true });
 shipmentSchema.pre('validate', async function generateTrackingNumber() {
     if (this.trackingNumber) {

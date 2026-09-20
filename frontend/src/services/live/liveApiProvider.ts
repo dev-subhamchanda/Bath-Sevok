@@ -168,6 +168,10 @@ export class LiveApiProvider implements DataProvider {
 
   private initWebSocket(): void {
     if (typeof window === "undefined" || this.isIntentionallyClosed) return;
+    if (!this.wsUrl) {
+      this.wsStatus = "disconnected";
+      return;
+    }
     if (this.ws && (this.ws.readyState === WebSocket.OPEN || this.ws.readyState === WebSocket.CONNECTING)) {
       return;
     }

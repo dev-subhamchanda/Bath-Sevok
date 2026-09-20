@@ -1,13 +1,16 @@
 import React, { useState, useMemo } from "react";
+import { useNavigate } from "react-router-dom";
 import { useShipmentStore } from "@/stores/shipmentStore";
 import { initialShipments } from "@/services/mock/seedData";
 import { StatusBadge } from "@/components/common/StatusBadge";
 
 interface ConsignmentsTableProps {
   onOpenCreateModal?: () => void;
+  liveOnly?: boolean;
 }
 
-export const ConsignmentsTable: React.FC<ConsignmentsTableProps> = ({ onOpenCreateModal }) => {
+export const ConsignmentsTable: React.FC<ConsignmentsTableProps> = ({ onOpenCreateModal, liveOnly = false }) => {
+  const navigate = useNavigate();
   const shipments = useShipmentStore((s) => s.shipments);
   const selectedShipmentId = useShipmentStore((s) => s.selectedShipmentId);
   const selectShipment = useShipmentStore((s) => s.selectShipment);
@@ -16,7 +19,13 @@ export const ConsignmentsTable: React.FC<ConsignmentsTableProps> = ({ onOpenCrea
   const [priorityFilter, setPriorityFilter] = useState("ALL");
   const [statusFilter, setStatusFilter] = useState("ALL");
 
-  const effectiveShipments = shipments.length > 0 ? shipments : initialShipments;
+  const effectiveShipments = liveOnly ? shipments : shipments.length > 0 ? shipments : initialShipments;
+
+  const trackShipment = (event: React.MouseEvent, shipmentId: string) => {
+    event.stopPropagation();
+    selectShipment(shipmentId);
+    navigate("/dashboard");
+  };
 
   const filteredShipments = useMemo(() => {
     return effectiveShipments.filter((s) => {
@@ -107,15 +116,8 @@ export const ConsignmentsTable: React.FC<ConsignmentsTableProps> = ({ onOpenCrea
 
       {/* Mobile Consignment Card Feed */}
       <div className="flex flex-col gap-3 md:hidden">
-        {filteredShipments.length === 0 ? (
-          <div className="p-8 bg-white rounded-2xl border border-slate-200 text-center flex flex-col items-center gap-2">
-            <span className="material-symbols-outlined text-3xl text-slate-400">inventory_2</span>
-            <p className="text-xs font-semibold text-slate-700">No consignments found</p>
-            <p className="text-[11px] text-slate-400">Try adjusting your filters or dispatch a new consignment.</p>
-          </div>
-        ) : (
-          filteredShipments.map((shp) => {
-            const isSelected = selectedShipmentId === shp.id;
+        {filteredShipments.map((shp) => {
+          const isSelected = selectedShipmentId === shp.id;
           const isAtRisk = shp.status === "at_risk" || shp.status === "delayed";
 
           return (
@@ -188,15 +190,15 @@ export const ConsignmentsTable: React.FC<ConsignmentsTableProps> = ({ onOpenCrea
                 </div>
                 <button
                   type="button"
-                  className="px-2.5 py-1 text-xs font-semibold rounded-lg bg-[#174a73] text-white hover:bg-[#003356] transition-colors"
+                  onClick={(event) => trackShipment(event, shp.id)}
+                  className="px-2.5 py-1 text-xs font-semibold rounded-lg bg-[#005148] text-white hover:bg-[#003d36] transition-colors"
                 >
-                  Compare Route
+                  Track
                 </button>
               </div>
             </div>
           );
-        })
-      )}
+        })}
       </div>
 
       {/* Desktop & Tablet Consignments Data Table */}
@@ -215,20 +217,15 @@ export const ConsignmentsTable: React.FC<ConsignmentsTableProps> = ({ onOpenCrea
               </tr>
             </thead>
             <tbody className="divide-y divide-[#e5e8ee]">
-              {filteredShipments.length === 0 ? (
+              {filteredShipments.length === 0 && (
                 <tr>
-                  <td colSpan={8} className="py-12 px-4 text-center">
-                    <div className="flex flex-col items-center justify-center gap-2 text-slate-500">
-                      <span className="material-symbols-outlined text-4xl text-slate-400">inventory_2</span>
-                      <p className="text-sm font-semibold text-slate-700">No consignments found</p>
-                      <p className="text-xs text-slate-400 max-w-sm">
-                        No shipments match the selected filter criteria or no active shipments have been dispatched yet.
-                      </p>
-                    </div>
+                  <td colSpan={7} className="py-12 px-4 text-center text-xs text-[#72777f]">
+                    <span className="material-symbols-outlined block text-3xl text-[#9aa1aa] mb-2">inventory_2</span>
+                    No live consignments match the current filters.
                   </td>
                 </tr>
-              ) : (
-                filteredShipments.map((shp) => {
+              )}
+              {filteredShipments.map((shp) => {
                 const isSelected = selectedShipmentId === shp.id;
 
                 return (
@@ -306,15 +303,15 @@ export const ConsignmentsTable: React.FC<ConsignmentsTableProps> = ({ onOpenCrea
                     <td className="py-3.5 px-4 text-right">
                       <button
                         type="button"
-                        className="px-2.5 py-1 text-xs font-semibold rounded bg-[#174a73] hover:bg-[#003356] text-white transition-colors cursor-pointer"
+                        onClick={(event) => trackShipment(event, shp.id)}
+                        className="px-2.5 py-1 text-xs font-semibold rounded bg-[#005148] hover:bg-[#003d36] text-white transition-colors cursor-pointer"
                       >
-                        Compare
+                        Track
                       </button>
                     </td>
                   </tr>
                 );
-              })
-            )}
+              })}
             </tbody>
           </table>
         </div>

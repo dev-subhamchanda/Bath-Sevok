@@ -10,6 +10,8 @@ export declare const Shipment: mongoose.Model<{
         coordinates: number[];
     };
     loadType: string;
+    vehicleUnit: "heavy" | "light" | "moderate";
+    fleetClassification: "transit";
     imageUrl: string;
     imagePublicId: string;
     vehicleId?: mongoose.Types.ObjectId | null;
@@ -24,7 +26,6 @@ export declare const Shipment: mongoose.Model<{
     priority: "HIGH" | "LOW" | "NORMAL" | "URGENT";
     status: "ASSIGNED" | "CANCELLED" | "DELIVERED" | "IN_TRANSIT" | "PENDING";
     expectedDelivery?: NativeDate | null;
-    actualDelivery?: NativeDate | null;
 } & mongoose.DefaultTimestampProps, {}, {}, {
     id: string;
 }, mongoose.Document<unknown, {}, {
@@ -38,6 +39,8 @@ export declare const Shipment: mongoose.Model<{
         coordinates: number[];
     };
     loadType: string;
+    vehicleUnit: "heavy" | "light" | "moderate";
+    fleetClassification: "transit";
     imageUrl: string;
     imagePublicId: string;
     vehicleId?: mongoose.Types.ObjectId | null;
@@ -52,7 +55,6 @@ export declare const Shipment: mongoose.Model<{
     priority: "HIGH" | "LOW" | "NORMAL" | "URGENT";
     status: "ASSIGNED" | "CANCELLED" | "DELIVERED" | "IN_TRANSIT" | "PENDING";
     expectedDelivery?: NativeDate | null;
-    actualDelivery?: NativeDate | null;
 } & mongoose.DefaultTimestampProps, {
     id: string;
 }, {
@@ -68,6 +70,8 @@ export declare const Shipment: mongoose.Model<{
         coordinates: number[];
     };
     loadType: string;
+    vehicleUnit: "heavy" | "light" | "moderate";
+    fleetClassification: "transit";
     imageUrl: string;
     imagePublicId: string;
     vehicleId?: mongoose.Types.ObjectId | null;
@@ -82,7 +86,6 @@ export declare const Shipment: mongoose.Model<{
     priority: "HIGH" | "LOW" | "NORMAL" | "URGENT";
     status: "ASSIGNED" | "CANCELLED" | "DELIVERED" | "IN_TRANSIT" | "PENDING";
     expectedDelivery?: NativeDate | null;
-    actualDelivery?: NativeDate | null;
 } & mongoose.DefaultTimestampProps & {
     _id: mongoose.Types.ObjectId;
 } & {
@@ -102,6 +105,8 @@ export declare const Shipment: mongoose.Model<{
         coordinates: number[];
     };
     loadType: string;
+    vehicleUnit: "heavy" | "light" | "moderate";
+    fleetClassification: "transit";
     imageUrl: string;
     imagePublicId: string;
     vehicleId?: mongoose.Types.ObjectId | null;
@@ -116,7 +121,6 @@ export declare const Shipment: mongoose.Model<{
     priority: "HIGH" | "LOW" | "NORMAL" | "URGENT";
     status: "ASSIGNED" | "CANCELLED" | "DELIVERED" | "IN_TRANSIT" | "PENDING";
     expectedDelivery?: NativeDate | null;
-    actualDelivery?: NativeDate | null;
 } & mongoose.DefaultTimestampProps, mongoose.Document<unknown, {}, {
     trackingNumber: string;
     origin: {
@@ -128,6 +132,8 @@ export declare const Shipment: mongoose.Model<{
         coordinates: number[];
     };
     loadType: string;
+    vehicleUnit: "heavy" | "light" | "moderate";
+    fleetClassification: "transit";
     imageUrl: string;
     imagePublicId: string;
     vehicleId?: mongoose.Types.ObjectId | null;
@@ -142,7 +148,6 @@ export declare const Shipment: mongoose.Model<{
     priority: "HIGH" | "LOW" | "NORMAL" | "URGENT";
     status: "ASSIGNED" | "CANCELLED" | "DELIVERED" | "IN_TRANSIT" | "PENDING";
     expectedDelivery?: NativeDate | null;
-    actualDelivery?: NativeDate | null;
 } & mongoose.DefaultTimestampProps, {
     id: string;
 }, Omit<mongoose.DefaultSchemaOptions, "timestamps"> & {
@@ -158,6 +163,8 @@ export declare const Shipment: mongoose.Model<{
         coordinates: number[];
     };
     loadType: string;
+    vehicleUnit: "heavy" | "light" | "moderate";
+    fleetClassification: "transit";
     imageUrl: string;
     imagePublicId: string;
     vehicleId?: mongoose.Types.ObjectId | null;
@@ -172,7 +179,6 @@ export declare const Shipment: mongoose.Model<{
     priority: "HIGH" | "LOW" | "NORMAL" | "URGENT";
     status: "ASSIGNED" | "CANCELLED" | "DELIVERED" | "IN_TRANSIT" | "PENDING";
     expectedDelivery?: NativeDate | null;
-    actualDelivery?: NativeDate | null;
 } & mongoose.DefaultTimestampProps & {
     _id: mongoose.Types.ObjectId;
 } & {
@@ -192,6 +198,8 @@ export declare const Shipment: mongoose.Model<{
         coordinates: number[];
     };
     loadType: string;
+    vehicleUnit: "heavy" | "light" | "moderate";
+    fleetClassification: "transit";
     imageUrl: string;
     imagePublicId: string;
     vehicleId?: mongoose.Types.ObjectId | null;
@@ -206,7 +214,6 @@ export declare const Shipment: mongoose.Model<{
     priority: "HIGH" | "LOW" | "NORMAL" | "URGENT";
     status: "ASSIGNED" | "CANCELLED" | "DELIVERED" | "IN_TRANSIT" | "PENDING";
     expectedDelivery?: NativeDate | null;
-    actualDelivery?: NativeDate | null;
 } & {
     _id: mongoose.Types.ObjectId;
 } & {
@@ -224,6 +231,8 @@ export declare const Shipment: mongoose.Model<{
         coordinates: number[];
     };
     loadType: string;
+    vehicleUnit: "heavy" | "light" | "moderate";
+    fleetClassification: "transit";
     imageUrl: string;
     imagePublicId: string;
     vehicleId?: mongoose.Types.ObjectId | null;
@@ -238,7 +247,6 @@ export declare const Shipment: mongoose.Model<{
     priority: "HIGH" | "LOW" | "NORMAL" | "URGENT";
     status: "ASSIGNED" | "CANCELLED" | "DELIVERED" | "IN_TRANSIT" | "PENDING";
     expectedDelivery?: NativeDate | null;
-    actualDelivery?: NativeDate | null;
 } & {
     _id: mongoose.Types.ObjectId;
 } & {

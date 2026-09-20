@@ -1,5 +1,7 @@
 import React, { useState, useRef, useEffect } from "react";
+import { useFormContext } from "react-hook-form";
 import { searchLocations, type RegionalLocation } from "@/services/mock/driversData";
+import type { ShipmentFormValues } from "./formTypes";
 
 interface LocationFieldsProps {
   originText: string;
@@ -18,6 +20,9 @@ export const LocationFields: React.FC<LocationFieldsProps> = ({
   onDestinationChange,
   onSelectDestination
 }) => {
+  const { register, setValue, formState: { errors } } = useFormContext<ShipmentFormValues>();
+  const originRegistration = register("origin", { required: "Start location is required" });
+  const destinationRegistration = register("destination", { required: "Destination is required" });
   const [originSuggestionsOpen, setOriginSuggestionsOpen] = useState(false);
   const [destinationSuggestionsOpen, setDestinationSuggestionsOpen] = useState(false);
   const originWrapperRef = useRef<HTMLDivElement>(null);
@@ -54,9 +59,10 @@ export const LocationFields: React.FC<LocationFieldsProps> = ({
         <div className="relative">
           <input
             type="text"
-            required
+            {...originRegistration}
             value={originText}
             onChange={(e) => {
+              originRegistration.onChange(e);
               onOriginChange(e.target.value);
               setOriginSuggestionsOpen(true);
             }}
@@ -64,6 +70,7 @@ export const LocationFields: React.FC<LocationFieldsProps> = ({
             placeholder="Type city name (e.g. Guwahati)"
             className="w-full h-10 px-3 pr-8 rounded-lg bg-white text-xs font-semibold text-[#181c20] border border-[#e5e8ee] focus:border-[#174a73] focus:outline-none"
           />
+          {errors.origin && <span className="text-[10px] text-rose-600">{errors.origin.message}</span>}
           <span className="absolute right-2.5 top-2.5 material-symbols-outlined text-[18px] text-emerald-600 pointer-events-none">
             check
           </span>
@@ -77,6 +84,7 @@ export const LocationFields: React.FC<LocationFieldsProps> = ({
                 key={`origin-${loc.name}`}
                 type="button"
                 onClick={() => {
+                  setValue("origin", loc.name, { shouldValidate: true, shouldDirty: true });
                   onSelectOrigin(loc);
                   setOriginSuggestionsOpen(false);
                 }}
@@ -108,9 +116,10 @@ export const LocationFields: React.FC<LocationFieldsProps> = ({
         <div className="relative">
           <input
             type="text"
-            required
+            {...destinationRegistration}
             value={destinationText}
             onChange={(e) => {
+              destinationRegistration.onChange(e);
               onDestinationChange(e.target.value);
               setDestinationSuggestionsOpen(true);
             }}
@@ -118,6 +127,7 @@ export const LocationFields: React.FC<LocationFieldsProps> = ({
             placeholder="Type city name (e.g. Shillong)"
             className="w-full h-10 px-3 pr-8 rounded-lg bg-white text-xs font-semibold text-[#181c20] border border-[#e5e8ee] focus:border-[#174a73] focus:outline-none"
           />
+          {errors.destination && <span className="text-[10px] text-rose-600">{errors.destination.message}</span>}
           <span className="absolute right-2.5 top-2.5 material-symbols-outlined text-[18px] text-emerald-600 pointer-events-none">
             check
           </span>
@@ -131,6 +141,7 @@ export const LocationFields: React.FC<LocationFieldsProps> = ({
                 key={`dest-${loc.name}`}
                 type="button"
                 onClick={() => {
+                  setValue("destination", loc.name, { shouldValidate: true, shouldDirty: true });
                   onSelectDestination(loc);
                   setDestinationSuggestionsOpen(false);
                 }}

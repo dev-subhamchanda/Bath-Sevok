@@ -2,13 +2,14 @@ import type { Request, Response } from 'express';
 import { Shipment } from '../../models/shipment.model.js';
 import { Driver } from '../../models/driver.model.js';
 import { Vehicle } from '../../models/vehicle.model.js';
-import { User } from '../../models/auth.model.js';
 import { uploadShipmentImage } from '../../config/cloudinary.js';
 import { getVehicleLocation } from '../vehicles/vehicle-location.service.js';
 import mongoose from 'mongoose';
 
 type Point = { type: 'Point'; coordinates: [number, number] };
 type RouteSelection = { distanceKm: number; durationMinutes: number; geometry?: unknown };
+const shipmentStatuses = ['PENDING', 'ASSIGNED', 'IN_TRANSIT', 'DELIVERED', 'CANCELLED'] as const;
+type ShipmentStatus = typeof shipmentStatuses[number];
 
 const parseField = <T>(value: unknown): T | undefined => {
     if (typeof value !== 'string') {
@@ -45,7 +46,12 @@ const isRouteSelection = (value: unknown): value is RouteSelection => {
 const createShipment = async (req: Request, res: Response): Promise<void> => {
     try {
         const {
+            trackingNumber,
+            status,
+            expectedDelivery: expectedDeliveryField,
             loadType,
+            vehicleUnit,
+            fleetClassification,
             vehicleId,
             driverId,
             routeId,
@@ -58,6 +64,7 @@ const createShipment = async (req: Request, res: Response): Promise<void> => {
         const destination = parseField<Point>(req.body.destination);
         const route = parseField<RouteSelection>(routeField);
         const parsedWeightKg = typeof weightKg === 'string' ? Number(weightKg) : weightKg;
+        const expectedDelivery = expectedDeliveryField ? new Date(expectedDeliveryField) : undefined;
 
         if (!req.file) {
             res.status(400).json({ message: 'image is required' });
@@ -66,6 +73,27 @@ const createShipment = async (req: Request, res: Response): Promise<void> => {
 
         if (typeof loadType !== 'string' || loadType.trim().length === 0) {
             res.status(400).json({ message: 'loadType is required' });
+            return;
+        }
+
+        if (!['heavy', 'light', 'moderate'].includes(vehicleUnit)) {
+            res.status(400).json({ message: 'vehicleUnit must be heavy, light, or moderate' });
+            return;
+        }
+
+        if (fleetClassification !== 'transit') {
+            res.status(400).json({ message: 'fleetClassification must be transit' });
+            return;
+        }
+
+        if (status !== undefined && !shipmentStatuses.includes(status as ShipmentStatus)) {
+            res.status(400).json({ message: 'Invalid shipment status' });
+            return;
+        }
+        const parsedStatus = status === undefined ? undefined : status as ShipmentStatus;
+
+        if (expectedDeliveryField && (!expectedDelivery || Number.isNaN(expectedDelivery.getTime()))) {
+            res.status(400).json({ message: 'expectedDelivery must be a valid date' });
             return;
         }
 
@@ -79,77 +107,43 @@ const createShipment = async (req: Request, res: Response): Promise<void> => {
             return;
         }
 
-        let targetVehicleId = vehicleId;
-        let targetDriverId = driverId;
-
-        let [vehicle, driver] = await Promise.all([
-            mongoose.isValidObjectId(targetVehicleId) ? Vehicle.findById(targetVehicleId) : null,
-            mongoose.isValidObjectId(targetDriverId) ? Driver.findById(targetDriverId) : null,
+        const [vehicle, driver] = await Promise.all([
+            mongoose.isValidObjectId(vehicleId) ? Vehicle.findById(vehicleId) : null,
+            mongoose.isValidObjectId(driverId) ? Driver.findById(driverId) : null,
         ]);
-
-        if (!vehicle) {
-            vehicle = await Vehicle.findOne();
-            if (!vehicle) {
-                vehicle = await Vehicle.create({
-                    vehicleNumber: 'AS-01-AX-1029',
-                    type: 'Tata Prima 4028.S (Heavy Multi-Axle)',
-                    capacityKg: 10000,
-                    status: 'AVAILABLE',
-                });
-            }
-            targetVehicleId = vehicle._id;
-        }
-
-        if (!driver) {
-            driver = await Driver.findOne();
-            if (!driver) {
-                let driverUser = await User.findOne({ role: 'DRIVER' });
-                if (!driverUser) {
-                    driverUser = await User.create({
-                        name: 'T. Sangma',
-                        email: `driver-${Date.now()}@nerlogistics.in`,
-                        passwordHash: 'seeded_hash',
-                        role: 'DRIVER',
-                        status: 'ACTIVE',
-                        phone: '+91 94361 78921',
-                    });
-                }
-                driver = await Driver.create({
-                    userId: driverUser._id,
-                    licenseNumber: `DL-NER-${Date.now().toString().slice(-6)}`,
-                    phone: '+91 94361 78921',
-                    status: 'AVAILABLE',
-                });
-            }
-            targetDriverId = driver._id;
-        }
 
         if (typeof parsedWeightKg !== 'number' || !Number.isFinite(parsedWeightKg) || parsedWeightKg < 0) {
             res.status(400).json({ message: 'weightKg must be a non-negative number' });
             return;
         }
 
-        if (parsedWeightKg > vehicle.capacityKg) {
+        if (vehicle && parsedWeightKg > vehicle.capacityKg) {
             res.status(400).json({ message: 'weightKg exceeds vehicle capacity' });
             return;
         }
 
         const upload = await uploadShipmentImage(req.file);
-        const expectedDelivery = new Date(Date.now() + route.durationMinutes * 60 * 1000);
+        const deliveryDate = expectedDelivery || new Date(Date.now() + route.durationMinutes * 60 * 1000);
 
         const shipment = await Shipment.create({
+            ...(typeof trackingNumber === 'string' && trackingNumber.trim().length > 0
+                ? { trackingNumber: trackingNumber.trim() }
+                : {}),
             loadType: loadType.trim(),
+            vehicleUnit,
+            fleetClassification,
             imageUrl: upload.secureUrl,
             imagePublicId: upload.publicId,
             origin,
             destination,
-            vehicleId: targetVehicleId,
-            driverId: targetDriverId,
+            ...(vehicle ? { vehicleId: vehicle._id } : {}),
+            ...(driver ? { driverId: driver._id } : {}),
             routeId: mongoose.isValidObjectId(routeId) ? routeId : undefined,
             route,
             weightKg: parsedWeightKg,
-            priority: priority || 'NORMAL',
-            expectedDelivery,
+            priority,
+            expectedDelivery: deliveryDate,
+            ...(parsedStatus ? { status: parsedStatus } : {}),
         });
 
         const populatedShipment = await shipment.populate([

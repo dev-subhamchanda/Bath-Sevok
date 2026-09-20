@@ -1,4 +1,5 @@
 import React, { useState, useId } from "react";
+import { FormProvider, useForm } from "react-hook-form";
 import { useNavigate } from "react-router-dom";
 import { useShipmentStore } from "@/stores/shipmentStore";
 import {
@@ -10,7 +11,6 @@ import {
   type ParsedAlternativeRoute
 } from "@/services/api/apiClient";
 import {
-  registeredDrivers,
   findLocationByText,
   cargoCommodityPresets,
   type RegionalLocation
@@ -27,6 +27,8 @@ import { DriverDetailsFields } from "./shipmentModal/DriverDetailsFields";
 import { DriverPhotoUpload } from "./shipmentModal/DriverPhotoUpload";
 import { VehicleCommodityFields } from "./shipmentModal/VehicleCommodityFields";
 import { ReceiverScheduleFields } from "./shipmentModal/ReceiverScheduleFields";
+import { SchemaFields } from "./shipmentModal/SchemaFields";
+import type { ShipmentFormValues } from "./shipmentModal/formTypes";
 
 interface CreateShipmentModalProps {
   isOpen: boolean;
@@ -43,7 +45,6 @@ export const CreateShipmentModal: React.FC<CreateShipmentModalProps> = ({
   const formId = useId();
   const addShipment = useShipmentStore((s) => s.addShipment);
   const selectShipment = useShipmentStore((s) => s.selectShipment);
-  const setShipments = useShipmentStore((s) => s.setShipments);
 
   // Generate unique initial consignment ID
   const generateNewId = () => {
@@ -51,7 +52,34 @@ export const CreateShipmentModal: React.FC<CreateShipmentModalProps> = ({
     return `SHP-2026-${randomNum}`;
   };
 
-  const [shipmentId, setShipmentId] = useState(generateNewId);
+  const formMethods = useForm<ShipmentFormValues>({
+    mode: "onBlur",
+    defaultValues: {
+      trackingNumber: generateNewId(),
+      vehicleId: "",
+      driverId: "",
+      routeId: "",
+      status: "PENDING",
+      origin: "Guwahati",
+      destination: "Shillong",
+      commodity: cargoCommodityPresets[0],
+      weightKg: 1200,
+      priority: 1,
+      vehicleUnit: "moderate",
+      fleetClassification: "transit",
+      driverName: "T. Sangma",
+      driverPhone: "+91 94361 78921",
+      driverLicenseId: "DL-01-2024-8841",
+      pickupTime: new Date().toISOString().slice(0, 16),
+      expectedDelivery: new Date(Date.now() + 8 * 3600 * 1000).toISOString().slice(0, 16),
+      receiverName: "Dr. M. Saikia",
+      receiverFacility: "Shillong Civil Hospital Medical Depot",
+      receiverPhone: "+91 94360 88210",
+      specialInstructions: "Maintain cold chain temperature 2°C - 8°C. Expedite transit clearance across GS Road / NH-6 corridor."
+    }
+  });
+  const { watch } = formMethods;
+  const formValues = watch();
 
   // Origin Location state: display name + [longitude, latitude] coordinates
   const [originText, setOriginText] = useState("Guwahati");
@@ -60,32 +88,6 @@ export const CreateShipmentModal: React.FC<CreateShipmentModalProps> = ({
   // Destination Location state: display name + [longitude, latitude] coordinates
   const [destinationText, setDestinationText] = useState("Shillong");
   const [destinationCoords, setDestinationCoords] = useState<[number, number]>([91.8933, 25.5788]);
-
-  // Driver Details (Manual Entry)
-  const [driverName, setDriverName] = useState("T. Sangma");
-  const [driverPhone, setDriverPhone] = useState("+91 94361 78921");
-  const [driverLicenseId, setDriverLicenseId] = useState("DL-01-2024-8841");
-
-  // Vehicle selection
-  const [selectedVehicleId, setSelectedVehicleId] = useState(
-    registeredDrivers[0].backendVehicleId || registeredDrivers[0].vehicleId
-  );
-  const [commodity, setCommodity] = useState(cargoCommodityPresets[0]);
-  const [priority, setPriority] = useState<1 | 2 | 3>(1);
-  const [weightKg, setWeightKg] = useState<number>(1200);
-
-  // Date-time defaults (Pickup: now, Delivery: +8 hours)
-  const [pickupTime, setPickupTime] = useState(() => new Date().toISOString().slice(0, 16));
-  const [expectedDelivery, setExpectedDelivery] = useState(() =>
-    new Date(Date.now() + 8 * 3600 * 1000).toISOString().slice(0, 16)
-  );
-
-  const [receiverName, setReceiverName] = useState("Dr. M. Saikia");
-  const [receiverFacility, setReceiverFacility] = useState("Shillong Civil Hospital Medical Depot");
-  const [receiverPhone, setReceiverPhone] = useState("+91 94360 88210");
-  const [specialInstructions, setSpecialInstructions] = useState(
-    "Maintain cold chain temperature 2°C - 8°C. Expedite transit clearance across GS Road / NH-6 corridor."
-  );
 
   // Image Upload / Capture state (Required, max 45 KB)
   const [selectedImage, setSelectedImage] = useState<CompressedImageResult | null>(null);
@@ -101,11 +103,6 @@ export const CreateShipmentModal: React.FC<CreateShipmentModalProps> = ({
   const [submissionError, setSubmissionError] = useState<string | null>(null);
 
   if (!isOpen) return null;
-
-  const selectedVehicleInfo =
-    registeredDrivers.find(
-      (d) => (d.backendVehicleId || d.vehicleId) === selectedVehicleId
-    ) || registeredDrivers[0];
 
   // Image processing with automatic compression to <= 45 KB
   const processImageFile = async (file: File) => {
@@ -127,7 +124,7 @@ export const CreateShipmentModal: React.FC<CreateShipmentModalProps> = ({
     setImageError(null);
     setIsCompressingImage(true);
     try {
-      const sample = await generateSampleDriverPhoto(driverName, driverLicenseId);
+      const sample = await generateSampleDriverPhoto(formValues.driverName, formValues.driverLicenseId);
       setSelectedImage(sample);
     } catch {
       setImageError("Could not generate sample driver photo.");
@@ -183,8 +180,7 @@ export const CreateShipmentModal: React.FC<CreateShipmentModalProps> = ({
   };
 
   // Form submission: Validate -> Format GeoJSON -> ORS Route -> Backend POST -> State Update
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleValidSubmit = async (values: ShipmentFormValues) => {
     setSubmissionError(null);
     setImageError(null);
 
@@ -211,20 +207,6 @@ export const CreateShipmentModal: React.FC<CreateShipmentModalProps> = ({
       return;
     }
 
-    // 1b. Validate manual driver details
-    if (!driverName.trim()) {
-      setSubmissionError("Please enter driver name.");
-      return;
-    }
-    if (!driverPhone.trim()) {
-      setSubmissionError("Please enter driver phone number.");
-      return;
-    }
-    if (!driverLicenseId.trim()) {
-      setSubmissionError("Please enter driver license or ID.");
-      return;
-    }
-
     // 2. Validate that both origin and destination have valid [longitude, latitude] coordinates
     if (!originCoords || originCoords.length !== 2 || isNaN(originCoords[0]) || isNaN(originCoords[1])) {
       setSubmissionError("Invalid Start Location. Please enter or select a valid North East location.");
@@ -232,6 +214,11 @@ export const CreateShipmentModal: React.FC<CreateShipmentModalProps> = ({
     }
     if (!destinationCoords || destinationCoords.length !== 2 || isNaN(destinationCoords[0]) || isNaN(destinationCoords[1])) {
       setSubmissionError("Invalid Destination. Please enter or select a valid North East location.");
+      return;
+    }
+    if (new Date(values.expectedDelivery).getTime() <= new Date(values.pickupTime).getTime()) {
+      formMethods.setError("expectedDelivery", { type: "validate", message: "Expected delivery must be after pickup" });
+      setSubmissionError("Expected delivery must be after pickup time.");
       return;
     }
 
@@ -261,34 +248,34 @@ export const CreateShipmentModal: React.FC<CreateShipmentModalProps> = ({
         console.warn("Backend OpenRouteService calculation encountered an issue:", err);
       }
 
-      // 4. Vehicle & Driver IDs
-      const targetDriverId = "6a9a3c1010f836940a45ab2a";
-      const targetVehicleId = selectedVehicleInfo.backendVehicleId || selectedVehicleId || "6a9a3b6510f836940a45ab23";
-      const targetRouteId = orsRoute?.id || `ROUTE-${shipmentId}`;
+      const targetRouteId = orsRoute?.id || `ROUTE-${values.trackingNumber}`;
 
       // 5. Dispatch shipment creation to backend endpoint with all required fields
       const createdShipment = await shipmentApi.create({
         origin: originGeoJson,
         destination: destinationGeoJson,
-        priority,
-        commodity: commodity.trim(),
-        loadType: commodity.trim(),
-        weightKg: Number(weightKg) || 1200,
-        vehicleId: targetVehicleId,
-        driverId: targetDriverId,
-        routeId: targetRouteId,
+        priority: values.priority,
+        commodity: values.commodity.trim(),
+        loadType: values.commodity.trim(),
+        weightKg: values.weightKg,
+        vehicleUnit: values.vehicleUnit,
+        fleetClassification: values.fleetClassification,
+        trackingNumber: values.trackingNumber.trim(),
+        routeId: values.routeId.trim() || targetRouteId,
+        vehicleId: values.vehicleId.trim() || undefined,
+        driverId: values.driverId.trim() || undefined,
+        status: values.status,
         image: selectedImage.file || selectedImage.blob,
         driverPhoto: selectedImage.file || selectedImage.blob,
-        driverName: driverName.trim(),
-        driverPhone: driverPhone.trim(),
-        driverLicenseId: driverLicenseId.trim(),
+        driverName: values.driverName.trim(),
+        driverPhone: values.driverPhone.trim(),
+        driverLicenseId: values.driverLicenseId.trim(),
         driverPhotoUrl: selectedImage.dataUrl,
-        vehicleNumber: selectedVehicleInfo.vehicleNumber,
-        vehicleType: selectedVehicleInfo.vehicleType,
-        pickupTimeIso: new Date(pickupTime).toISOString(),
-        expectedDeliveryIso: new Date(expectedDelivery).toISOString(),
-        receiverContact: `${receiverName} (${receiverFacility}) • ${receiverPhone}`,
-        specialInstructions: specialInstructions.trim(),
+        vehicleType: values.vehicleUnit,
+        pickupTimeIso: new Date(values.pickupTime).toISOString(),
+        expectedDeliveryIso: new Date(values.expectedDelivery).toISOString(),
+        receiverContact: `${values.receiverName} (${values.receiverFacility}) - ${values.receiverPhone}`,
+        specialInstructions: values.specialInstructions.trim(),
         route: orsRoute
           ? {
               distanceKm: orsRoute.distanceKm,
@@ -302,11 +289,10 @@ export const CreateShipmentModal: React.FC<CreateShipmentModalProps> = ({
       createdShipment.destination = destinationText.trim();
       createdShipment.originCoordinates = [originCoords[0], originCoords[1]];
       createdShipment.destinationCoordinates = [destinationCoords[0], destinationCoords[1]];
-      createdShipment.id = shipmentId.trim() || createdShipment.id;
-      createdShipment.driverName = driverName.trim();
-      createdShipment.driverPhone = driverPhone.trim();
-      createdShipment.vehicleNumber = selectedVehicleInfo.vehicleNumber;
-      createdShipment.vehicleType = selectedVehicleInfo.vehicleType;
+      createdShipment.id = values.trackingNumber.trim() || createdShipment.id;
+      createdShipment.driverName = values.driverName.trim();
+      createdShipment.driverPhone = values.driverPhone.trim();
+      createdShipment.vehicleType = values.vehicleUnit;
       if (selectedImage?.dataUrl) {
         createdShipment.driverPhotoUrl = selectedImage.dataUrl;
       }
@@ -320,7 +306,7 @@ export const CreateShipmentModal: React.FC<CreateShipmentModalProps> = ({
           name: `${originText} ➔ ${destinationText} Corridor (${orsRoute.distanceKm} km)`,
           distanceKm: orsRoute.distanceKm,
           estimatedMinutes: orsRoute.durationMinutes,
-          riskScore: priority === 1 ? 0.08 : 0.16,
+          riskScore: values.priority === 1 ? 0.08 : 0.16,
           disruptionProbability: 0.09,
           geometry: orsRoute.coordinates, // [lat, lng] for Leaflet
           recommended: true,
@@ -328,17 +314,7 @@ export const CreateShipmentModal: React.FC<CreateShipmentModalProps> = ({
         };
       }
 
-      // 7. Refresh GET /shipments/list from backend
-      try {
-        const refreshed = await shipmentApi.getAll();
-        if (refreshed && refreshed.length > 0) {
-          setShipments(refreshed);
-        }
-      } catch (err) {
-        console.warn("Could not refresh shipments list after creation:", err);
-      }
-
-      // 8. Add to shipment store and select it
+      // 7. Keep the form-created shipment in local state without reloading the backend list.
       addShipment(createdShipment, newRouteOption);
       selectShipment(createdShipment.id);
 
@@ -393,7 +369,8 @@ export const CreateShipmentModal: React.FC<CreateShipmentModalProps> = ({
         </div>
 
         {/* Modal Scrollable Body */}
-        <form id={formId} onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-5 sm:p-6 flex flex-col gap-5">
+        <FormProvider {...formMethods}>
+        <form id={formId} onSubmit={formMethods.handleSubmit(handleValidSubmit)} className="flex-1 overflow-y-auto p-5 sm:p-6 flex flex-col gap-5">
           {/* Authentication Required Warning Banner */}
           {!isAuthenticated && (
             <div className="p-3.5 rounded-xl bg-amber-50 border border-amber-200 text-amber-900 text-xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2.5 animate-in fade-in">
@@ -434,20 +411,9 @@ export const CreateShipmentModal: React.FC<CreateShipmentModalProps> = ({
           )}
 
           {/* Section 1: Consignment ID, Commodity, Weight, Priority, Vehicle Selection */}
-          <VehicleCommodityFields
-            shipmentId={shipmentId}
-            onNewShipmentId={() => setShipmentId(generateNewId())}
-            onShipmentIdChange={setShipmentId}
-            commodity={commodity}
-            onCommodityChange={setCommodity}
-            weightKg={weightKg}
-            onWeightKgChange={setWeightKg}
-            priority={priority}
-            onPriorityChange={setPriority}
-            selectedVehicleId={selectedVehicleId}
-            onVehicleIdChange={setSelectedVehicleId}
-            selectedVehicleInfo={selectedVehicleInfo}
-          />
+          <VehicleCommodityFields />
+
+          <SchemaFields />
 
           {/* Section 2: Origin & Destination Corridor with Autocomplete */}
           <LocationFields
@@ -460,14 +426,7 @@ export const CreateShipmentModal: React.FC<CreateShipmentModalProps> = ({
           />
 
           {/* Section 3: Driver Details (Manual Entry) */}
-          <DriverDetailsFields
-            driverName={driverName}
-            onDriverNameChange={setDriverName}
-            driverPhone={driverPhone}
-            onDriverPhoneChange={setDriverPhone}
-            driverLicenseId={driverLicenseId}
-            onDriverLicenseIdChange={setDriverLicenseId}
-          />
+          <DriverDetailsFields />
 
           {/* Section 4: Driver Photo (Required, max 45 KB) */}
           <DriverPhotoUpload
@@ -480,21 +439,9 @@ export const CreateShipmentModal: React.FC<CreateShipmentModalProps> = ({
           />
 
           {/* Section 5: Transit Schedules, Receiver Details, and Instructions */}
-          <ReceiverScheduleFields
-            pickupTime={pickupTime}
-            onPickupTimeChange={setPickupTime}
-            expectedDelivery={expectedDelivery}
-            onExpectedDeliveryChange={setExpectedDelivery}
-            receiverName={receiverName}
-            onReceiverNameChange={setReceiverName}
-            receiverFacility={receiverFacility}
-            onReceiverFacilityChange={setReceiverFacility}
-            receiverPhone={receiverPhone}
-            onReceiverPhoneChange={setReceiverPhone}
-            specialInstructions={specialInstructions}
-            onSpecialInstructionsChange={setSpecialInstructions}
-          />
+          <ReceiverScheduleFields />
         </form>
+        </FormProvider>
 
         {/* Modal Footer Actions */}
         <div className="flex items-center justify-between px-5 py-3.5 border-t border-[#e5e8ee] bg-[#f8fafc]">

@@ -1,4 +1,15 @@
 import type { Request, Response } from 'express';
+import { Vehicle } from '../../models/vehicle.model.js';
+
+export const getVehicles = async (_req: Request, res: Response): Promise<void> => {
+	try {
+		const vehicles = await Vehicle.find().select('-__v').lean();
+		res.status(200).json({ vehicles });
+	} catch (error) {
+		console.error('Error retrieving vehicles:', error);
+		res.status(500).json({ message: 'Internal server error' });
+	}
+};
 import { getVehicleLocation } from './vehicle-location.service.js';
 
 export const getCurrentVehicleLocation = async (req: Request, res: Response): Promise<void> => {

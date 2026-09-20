@@ -2,13 +2,32 @@ import type { AxiosRequestConfig } from "axios";
 import type { Vehicle, RoadSegment } from "@/types/domain";
 import { apiClient, getAdaptive } from "./httpClient";
 
+export interface ShipmentVehicleOption {
+  id: string;
+  vehicleNumber: string;
+  vehicleType: string;
+  capacityKg: number;
+  driverId?: string;
+}
+
 /**
  * Vehicles Service
  */
 export const vehicleApi = {
+  async getShipmentOptions(config?: AxiosRequestConfig): Promise<ShipmentVehicleOption[]> {
+    const res = await apiClient.get<{ vehicles?: Array<Record<string, unknown>> }>("/vehicles/list", config);
+    return (res.data.vehicles || []).map((vehicle) => ({
+      id: String(vehicle._id || ""),
+      vehicleNumber: String(vehicle.vehicleNumber || "Unknown vehicle"),
+      vehicleType: String(vehicle.type || "Fleet vehicle"),
+      capacityKg: typeof vehicle.capacityKg === "number" ? vehicle.capacityKg : 0,
+      driverId: vehicle.driverId ? String(vehicle.driverId) : undefined
+    })).filter((vehicle) => vehicle.id);
+  },
+
   async getAll(config?: AxiosRequestConfig): Promise<Vehicle[]> {
     try {
-      const res = await apiClient.get<{ vehicles?: unknown[]; data?: unknown[] } | unknown[]>("/vehicle/list", config);
+      const res = await apiClient.get<{ vehicles?: unknown[]; data?: unknown[] } | unknown[]>("/vehicles/list", config);
       const list = Array.isArray(res.data) ? res.data : (res.data as { vehicles?: unknown[] })?.vehicles || [];
       if (list && list.length > 0) {
         return list.map((rawItem: unknown, index: number) => {

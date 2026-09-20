@@ -57,6 +57,9 @@ export function normalizeHttpUrl(rawUrl: string): string {
  * e.g. "https://api.example.com" -> "wss://api.example.com/ws"
  */
 export function deriveWsUrl(httpBaseUrl: string, explicitWsUrl?: string): string {
+  if (explicitWsUrl !== undefined && explicitWsUrl.trim() === "") {
+    return "";
+  }
   const customWs = explicitWsUrl?.trim().replace(/^["']|["']$/g, "");
   // If explicit WS URL is provided and not defaulting to localhost while HTTP is pointing elsewhere
   if (customWs && (!customWs.includes("localhost:3001") || httpBaseUrl.includes("localhost:3001"))) {
