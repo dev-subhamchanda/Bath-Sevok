@@ -31,11 +31,10 @@ export const VehicleMapMarkers: React.FC<VehicleMapMarkersProps> = ({
                 <div className="flex items-center justify-between gap-2 mb-1.5">
                   <span className="font-bold text-xs text-[#003356] font-mono">{v.id}</span>
                   <span
-                    className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full capitalize ${
-                      isBlocked
+                    className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full capitalize ${isBlocked
                         ? "bg-rose-100 text-rose-800"
                         : "bg-emerald-100 text-emerald-800"
-                    }`}
+                      }`}
                   >
                     {isBlocked ? "Halted (Cutoff)" : v.status}
                   </span>

@@ -19,7 +19,10 @@ export const ConsignmentsTable: React.FC<ConsignmentsTableProps> = ({ onOpenCrea
   const [priorityFilter, setPriorityFilter] = useState("ALL");
   const [statusFilter, setStatusFilter] = useState("ALL");
 
-  const effectiveShipments = liveOnly ? shipments : shipments.length > 0 ? shipments : initialShipments;
+  // Demo map data disabled for production.
+  // Kept for development/testing.
+  // const effectiveShipments = liveOnly ? shipments : shipments.length > 0 ? shipments : initialShipments;
+  const effectiveShipments = shipments;
 
   const trackShipment = (event: React.MouseEvent, shipmentId: string) => {
     event.stopPropagation();
@@ -124,16 +127,14 @@ export const ConsignmentsTable: React.FC<ConsignmentsTableProps> = ({ onOpenCrea
             <div
               key={shp.id}
               onClick={() => selectShipment(shp.id)}
-              className={`bg-white rounded-2xl shadow-sm p-4 border transition-all cursor-pointer relative overflow-hidden ${
-                isSelected
+              className={`bg-white rounded-2xl shadow-sm p-4 border transition-all cursor-pointer relative overflow-hidden ${isSelected
                   ? "border-[#003356] ring-2 ring-[#003356]/20 bg-sky-50/20"
                   : "border-slate-200/80 hover:border-slate-300"
-              }`}
+                }`}
             >
               <div
-                className={`absolute top-0 left-0 right-0 h-1.5 ${
-                  isAtRisk ? "bg-amber-500" : "bg-[#005148]"
-                }`}
+                className={`absolute top-0 left-0 right-0 h-1.5 ${isAtRisk ? "bg-amber-500" : "bg-[#005148]"
+                  }`}
               />
 
               <div className="flex items-start justify-between gap-2 pt-1">
@@ -141,11 +142,10 @@ export const ConsignmentsTable: React.FC<ConsignmentsTableProps> = ({ onOpenCrea
                   <div className="flex items-center gap-2">
                     <span className="text-sm font-bold text-slate-900">{shp.id}</span>
                     <span
-                      className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${
-                        shp.priority === 1
+                      className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${shp.priority === 1
                           ? "bg-rose-100 text-rose-800"
                           : "bg-sky-100 text-sky-800"
-                      }`}
+                        }`}
                     >
                       P{shp.priority}
                     </span>
@@ -232,9 +232,8 @@ export const ConsignmentsTable: React.FC<ConsignmentsTableProps> = ({ onOpenCrea
                   <tr
                     key={shp.id}
                     onClick={() => selectShipment(shp.id)}
-                    className={`cursor-pointer transition-colors ${
-                      isSelected ? "bg-[#cfe4ff]/30 font-medium" : "hover:bg-[#f8fafc]"
-                    }`}
+                    className={`cursor-pointer transition-colors ${isSelected ? "bg-[#cfe4ff]/30 font-medium" : "hover:bg-[#f8fafc]"
+                      }`}
                   >
                     <td className="py-3.5 px-4">
                       <div className="flex items-center gap-2">
@@ -266,11 +265,10 @@ export const ConsignmentsTable: React.FC<ConsignmentsTableProps> = ({ onOpenCrea
                     </td>
                     <td className="py-3.5 px-4">
                       <span
-                        className={`inline-block px-2 py-0.5 rounded text-[10px] font-bold ${
-                          shp.priority === 1
+                        className={`inline-block px-2 py-0.5 rounded text-[10px] font-bold ${shp.priority === 1
                             ? "bg-[#ffdad6] text-[#ba1a1a]"
                             : "bg-[#cfe4ff] text-[#001d34]"
-                        }`}
+                          }`}
                       >
                         P{shp.priority}
                       </span>
@@ -290,9 +288,8 @@ export const ConsignmentsTable: React.FC<ConsignmentsTableProps> = ({ onOpenCrea
                     </td>
                     <td className="py-3.5 px-4">
                       <span
-                        className={`font-bold ${
-                          shp.riskScore > 0.5 ? "text-[#ba1a1a]" : "text-[#15803D]"
-                        }`}
+                        className={`font-bold ${shp.riskScore > 0.5 ? "text-[#ba1a1a]" : "text-[#15803D]"
+                          }`}
                       >
                         {Math.round(shp.riskScore * 100)}%
                       </span>

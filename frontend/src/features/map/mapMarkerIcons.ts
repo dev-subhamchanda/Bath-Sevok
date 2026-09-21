@@ -81,3 +81,78 @@ export const createLiveUserGpsIcon = (): L.DivIcon => {
     iconAnchor: [0, 0]
   });
 };
+
+/**
+ * Consumer-style Delivery Vehicle Marker (Inspired by Rapido, Zomato, Blinkit)
+ * Features a distinct delivery vehicle badge, vehicle plate number, driver label, and active tracking pulse.
+ */
+export const createConsumerDeliveryVehicleIcon = (
+  vehiclePlate: string,
+  driverName?: string,
+  isTrackingSelected?: boolean
+): L.DivIcon => {
+  const displayPlate = vehiclePlate || "Delivery Unit";
+  return L.divIcon({
+    className: "consumer-vehicle-marker",
+    html: `
+      <div class="relative flex flex-col items-center cursor-pointer select-none" style="transform: translate(-50%, -100%);">
+        ${
+          isTrackingSelected
+            ? '<span class="absolute -top-1 w-11 h-11 rounded-full bg-emerald-500/30 animate-ping"></span>'
+            : ""
+        }
+        <div class="relative flex items-center gap-2 px-3 py-1.5 rounded-2xl bg-white text-slate-900 shadow-[0_4px_16px_rgba(0,0,0,0.18)] border-2 ${
+          isTrackingSelected ? "border-[#005148] ring-4 ring-emerald-500/25 scale-105" : "border-slate-200 hover:scale-105"
+        } transition-all">
+          <div class="w-7 h-7 rounded-xl ${
+            isTrackingSelected ? "bg-[#005148] text-white" : "bg-slate-100 text-slate-800"
+          } flex items-center justify-center text-sm shadow-xs font-bold">
+            🚚
+          </div>
+          <div class="flex flex-col text-left">
+            <span class="font-extrabold text-[11px] text-slate-900 font-mono tracking-tight leading-tight">${displayPlate}</span>
+            ${
+              driverName
+                ? `<span class="text-[9px] text-slate-500 font-semibold leading-tight truncate max-w-[90px]">${driverName}</span>`
+                : `<span class="text-[9px] text-emerald-700 font-bold leading-tight uppercase tracking-wider">Active</span>`
+            }
+          </div>
+        </div>
+        <div class="w-2.5 h-2.5 bg-white border-r-2 border-b-2 ${
+          isTrackingSelected ? "border-[#005148]" : "border-slate-200"
+        } rotate-45 -mt-1.5 shadow-xs"></div>
+      </div>
+    `,
+    iconSize: [0, 0],
+    iconAnchor: [0, 0]
+  });
+};
+
+/**
+ * Consumer-style Destination Pin Marker (Inspired by Rapido, Zomato, Blinkit)
+ * Clean, modern drop-off pin with destination city name.
+ */
+export const createConsumerDestinationIcon = (
+  destinationCity: string,
+  isTrackingSelected?: boolean
+): L.DivIcon => {
+  const city = destinationCity || "Destination";
+  return L.divIcon({
+    className: "consumer-destination-marker",
+    html: `
+      <div class="relative flex flex-col items-center cursor-pointer select-none" style="transform: translate(-50%, -100%);">
+        <div class="flex items-center gap-1.5 px-3 py-1.5 rounded-2xl bg-slate-900 text-white shadow-[0_4px_16px_rgba(0,0,0,0.22)] border-2 ${
+          isTrackingSelected ? "border-rose-500 ring-4 ring-rose-500/25 scale-105" : "border-slate-700 hover:scale-105"
+        } transition-all">
+          <span class="text-xs">📍</span>
+          <span class="font-bold text-[11px] tracking-tight leading-tight">${city}</span>
+        </div>
+        <div class="w-2.5 h-2.5 bg-slate-900 border-r-2 border-b-2 ${
+          isTrackingSelected ? "border-rose-500" : "border-slate-700"
+        } rotate-45 -mt-1.5 shadow-xs"></div>
+      </div>
+    `,
+    iconSize: [0, 0],
+    iconAnchor: [0, 0]
+  });
+};

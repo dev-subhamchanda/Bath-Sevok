@@ -80,14 +80,17 @@ export function useLiveUpdates() {
           setError(message);
           setIsConnected(false);
 
-          // Seed stores with fallback baseline so app never renders blank
-          setVehicles(initialSnapshot.vehicles);
-          setRoads(initialSnapshot.roads);
-          setIncidents(initialSnapshot.incidents);
-          setShipments(initialSnapshot.shipments, initialSnapshot.routes);
-          setAlerts(initialSnapshot.alerts);
-          setWeather(initialSnapshot.weather);
-          setKpis(initialSnapshot.kpis);
+          // Demo map data disabled for production.
+          // Kept for development/testing.
+          if (sourceType === "mock") {
+            setVehicles(initialSnapshot.vehicles);
+            setRoads(initialSnapshot.roads);
+            setIncidents(initialSnapshot.incidents);
+            setShipments(initialSnapshot.shipments, initialSnapshot.routes);
+            setAlerts(initialSnapshot.alerts);
+            setWeather(initialSnapshot.weather);
+            setKpis(initialSnapshot.kpis);
+          }
         }
       }
     }

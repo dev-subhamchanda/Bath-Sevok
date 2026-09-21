@@ -98,31 +98,28 @@ export const VehiclesTable: React.FC = () => {
             veh.vehicleType === "heavy"
               ? "local_shipping"
               : veh.vehicleType === "four-wheeler"
-              ? "rv_hookup"
-              : "two_wheeler";
+                ? "rv_hookup"
+                : "two_wheeler";
 
           return (
             <div
               key={veh.id}
               onClick={() => selectVehicle(veh.id)}
-              className={`bg-white rounded-2xl shadow-sm p-4 border transition-all cursor-pointer relative overflow-hidden ${
-                isSelected
+              className={`bg-white rounded-2xl shadow-sm p-4 border transition-all cursor-pointer relative overflow-hidden ${isSelected
                   ? "border-[#003356] ring-2 ring-[#003356]/20 bg-sky-50/20"
                   : "border-slate-200/80 hover:border-slate-300"
-              }`}
+                }`}
             >
               <div
-                className={`absolute top-0 left-0 right-0 h-1.5 ${
-                  isDelayed ? "bg-rose-500" : "bg-[#174a73]"
-                }`}
+                className={`absolute top-0 left-0 right-0 h-1.5 ${isDelayed ? "bg-rose-500" : "bg-[#174a73]"
+                  }`}
               />
 
               <div className="flex items-start justify-between gap-2 pt-1">
                 <div className="flex items-center gap-3 min-w-0">
                   <div
-                    className={`w-10 h-10 rounded-xl flex items-center justify-center text-white shrink-0 shadow-xs ${
-                      isDelayed ? "bg-rose-600" : "bg-[#003356]"
-                    }`}
+                    className={`w-10 h-10 rounded-xl flex items-center justify-center text-white shrink-0 shadow-xs ${isDelayed ? "bg-rose-600" : "bg-[#003356]"
+                      }`}
                   >
                     <span className="material-symbols-outlined text-[22px]">{typeIcon}</span>
                   </div>
@@ -189,16 +186,14 @@ export const VehiclesTable: React.FC = () => {
                   <tr
                     key={veh.id}
                     onClick={() => selectVehicle(veh.id)}
-                    className={`cursor-pointer transition-colors ${
-                      isSelected ? "bg-[#cfe4ff]/30 font-medium" : "hover:bg-[#f8fafc]"
-                    }`}
+                    className={`cursor-pointer transition-colors ${isSelected ? "bg-[#cfe4ff]/30 font-medium" : "hover:bg-[#f8fafc]"
+                      }`}
                   >
                     <td className="py-3.5 px-4">
                       <div className="flex items-center gap-2">
                         <span
-                          className={`w-2.5 h-2.5 rounded-full ${
-                            isDelayed ? "bg-[#dc2626] animate-pulse" : "bg-[#174a73]"
-                          }`}
+                          className={`w-2.5 h-2.5 rounded-full ${isDelayed ? "bg-[#dc2626] animate-pulse" : "bg-[#174a73]"
+                            }`}
                         />
                         <span className="font-bold text-[#003356]">{veh.id}</span>
                       </div>

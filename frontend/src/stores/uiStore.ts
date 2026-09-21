@@ -51,13 +51,16 @@ export const useUiStore = create<UiState>((set) => ({
   isMapPanelCollapsed: false,
   demoScenarioStatus: "idle",
   kpis: initialKpis,
-  userGpsLocation: {
-    lat: 25.7200,
-    lng: 91.8700,
-    accuracy: 12,
-    isLive: false,
-    readableLocation: "NH-6 Corridor near Nongpoh, Meghalaya"
-  },
+  // Demo map data disabled for production.
+  // Kept for development/testing.
+  // userGpsLocation: {
+  //   lat: 25.7200,
+  //   lng: 91.8700,
+  //   accuracy: 12,
+  //   isLive: false,
+  //   readableLocation: "NH-6 Corridor near Nongpoh, Meghalaya"
+  // },
+  userGpsLocation: null,
   setActiveRole: (role) => set({ activeRole: role }),
   setSelectedVehicleType: (selectedVehicleType) => set({ selectedVehicleType }),
   setSearchQuery: (searchQuery) => set({ searchQuery }),

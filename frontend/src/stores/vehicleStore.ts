@@ -11,7 +11,10 @@ interface VehicleState {
 
 export const useVehicleStore = create<VehicleState>((set) => ({
   vehicles: [],
-  selectedVehicleId: "HV-09",
+  // Demo map data disabled for production.
+  // Kept for development/testing.
+  // selectedVehicleId: "HV-09",
+  selectedVehicleId: null,
   setVehicles: (vehicles) => set({ vehicles }),
   applyPatch: (patchedVehicles) =>
     set((state) => {

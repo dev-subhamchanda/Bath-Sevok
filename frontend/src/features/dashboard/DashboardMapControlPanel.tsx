@@ -23,7 +23,10 @@ export const DashboardMapControlPanel: React.FC<DashboardMapControlPanelProps> =
   const searchInputRef = useRef<HTMLInputElement | null>(null);
 
   // Compute live values from stores
-  const activeVehiclesCount = vehicles.length > 0 ? 148 : kpis.activeVehicles;
+  // Demo map data disabled for production.
+  // Kept for development/testing.
+  // const activeVehiclesCount = vehicles.length > 0 ? 148 : kpis.activeVehicles;
+  const activeVehiclesCount = vehicles.length;
   const atRiskCount =
     roads.filter((r) => r.status === "at_risk" || r.status === "under_observation").length ||
     kpis.atRiskRoutes;

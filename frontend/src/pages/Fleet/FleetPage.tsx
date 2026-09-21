@@ -101,18 +101,16 @@ export const FleetPage: React.FC<{ initialTab?: "vehicles" | "deliveries" }> = (
             <button
               type="button"
               onClick={() => setActiveTab("vehicles")}
-              className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
-                activeTab === "vehicles"
+              className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-semibold transition-all cursor-pointer ${activeTab === "vehicles"
                   ? "bg-[#003356] text-white shadow-xs"
                   : "text-[#42474e] hover:bg-[#ebeef4] hover:text-[#181c20]"
-              }`}
+                }`}
             >
               <span className="material-symbols-outlined text-[18px]">commute</span>
               <span>Vehicles</span>
               <span
-                className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
-                  activeTab === "vehicles" ? "bg-white text-[#003356]" : "bg-[#ebeef4] text-[#72777f]"
-                }`}
+                className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${activeTab === "vehicles" ? "bg-white text-[#003356]" : "bg-[#ebeef4] text-[#72777f]"
+                  }`}
               >
                 {vehicles.length || 148}
               </span>
@@ -121,19 +119,17 @@ export const FleetPage: React.FC<{ initialTab?: "vehicles" | "deliveries" }> = (
             <button
               type="button"
               onClick={() => setActiveTab("deliveries")}
-              className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
-                activeTab === "deliveries"
+              className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-semibold transition-all cursor-pointer ${activeTab === "deliveries"
                   ? "bg-[#003356] text-white shadow-xs"
                   : "text-[#42474e] hover:bg-[#ebeef4] hover:text-[#181c20]"
-              }`}
+                }`}
             >
               <span className="material-symbols-outlined text-[18px]">local_mall</span>
               <span className="sm:hidden">Deliveries</span>
               <span className="hidden sm:inline">Deliveries (Consignments)</span>
               <span
-                className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
-                  activeTab === "deliveries" ? "bg-white text-[#003356]" : "bg-[#ebeef4] text-[#72777f]"
-                }`}
+                className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${activeTab === "deliveries" ? "bg-white text-[#003356]" : "bg-[#ebeef4] text-[#72777f]"
+                  }`}
               >
                 {shipments.length}
               </span>

@@ -107,6 +107,11 @@ export interface Shipment {
   trackingNumber?: string;
   weightKg?: number;
   rawBackendId?: string;
+  backendStatus?: string;
+  routeGeometry?: [number, number][];
+  routeDistanceKm?: number;
+  routeDurationMinutes?: number;
+  createdAt?: string;
 }
 
 export interface RouteOption {

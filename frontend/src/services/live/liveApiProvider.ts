@@ -103,24 +103,28 @@ export class LiveApiProvider implements DataProvider {
         weather,
         kpis
       ] = await Promise.all([
-        vehicleApi.getAll().catch(() => initialSnapshot.vehicles),
-        roadApi.getAll().catch(() => initialSnapshot.roads),
-        incidentApi.getAll().catch(() => initialSnapshot.incidents),
-        shipmentApi.getAll().catch(() => initialSnapshot.shipments),
-        routeApi.getAll().catch(() => initialSnapshot.routes),
-        alertApi.getAll().catch(() => initialSnapshot.alerts),
-        weatherApi.getAll().catch(() => initialSnapshot.weather),
+        // Demo map data disabled for production.
+        // Kept for development/testing.
+        vehicleApi.getAll().catch(() => []),
+        roadApi.getAll().catch(() => []),
+        incidentApi.getAll().catch(() => []),
+        shipmentApi.getAll().catch(() => []),
+        routeApi.getAll().catch(() => []),
+        alertApi.getAll().catch(() => []),
+        weatherApi.getAll().catch(() => []),
         kpiApi.getKpis().catch(() => initialSnapshot.kpis)
       ]);
 
+      // Demo map data disabled for production.
+      // Kept for development/testing.
       return {
-        vehicles: Array.isArray(vehicles) && vehicles.length > 0 ? vehicles : initialSnapshot.vehicles,
-        roads: Array.isArray(roads) && roads.length > 0 ? roads : initialSnapshot.roads,
-        incidents: Array.isArray(incidents) && incidents.length > 0 ? incidents : initialSnapshot.incidents,
-        shipments: Array.isArray(shipments) && shipments.length > 0 ? shipments : initialSnapshot.shipments,
-        routes: Array.isArray(routes) && routes.length > 0 ? routes : initialSnapshot.routes,
-        alerts: Array.isArray(alerts) && alerts.length > 0 ? alerts : initialSnapshot.alerts,
-        weather: Array.isArray(weather) && weather.length > 0 ? weather : initialSnapshot.weather,
+        vehicles: Array.isArray(vehicles) ? vehicles : [],
+        roads: Array.isArray(roads) ? roads : [],
+        incidents: Array.isArray(incidents) ? incidents : [],
+        shipments: Array.isArray(shipments) ? shipments : [],
+        routes: Array.isArray(routes) ? routes : [],
+        alerts: Array.isArray(alerts) ? alerts : [],
+        weather: Array.isArray(weather) ? weather : [],
         kpis: kpis || initialSnapshot.kpis
       };
     } catch (err: unknown) {
@@ -135,14 +139,16 @@ export class LiveApiProvider implements DataProvider {
    */
   private normalizeSnapshot(raw: unknown): DataSnapshot {
     const s = (raw && typeof raw === "object" ? raw : {}) as Partial<DataSnapshot>;
+    // Demo map data disabled for production.
+    // Kept for development/testing.
     return {
-      vehicles: Array.isArray(s.vehicles) ? s.vehicles : initialSnapshot.vehicles,
-      roads: Array.isArray(s.roads) ? s.roads : initialSnapshot.roads,
-      incidents: Array.isArray(s.incidents) ? s.incidents : initialSnapshot.incidents,
-      shipments: Array.isArray(s.shipments) ? s.shipments : initialSnapshot.shipments,
-      routes: Array.isArray(s.routes) ? s.routes : initialSnapshot.routes,
-      alerts: Array.isArray(s.alerts) ? s.alerts : initialSnapshot.alerts,
-      weather: Array.isArray(s.weather) ? s.weather : initialSnapshot.weather,
+      vehicles: Array.isArray(s.vehicles) ? s.vehicles : [],
+      roads: Array.isArray(s.roads) ? s.roads : [],
+      incidents: Array.isArray(s.incidents) ? s.incidents : [],
+      shipments: Array.isArray(s.shipments) ? s.shipments : [],
+      routes: Array.isArray(s.routes) ? s.routes : [],
+      alerts: Array.isArray(s.alerts) ? s.alerts : [],
+      weather: Array.isArray(s.weather) ? s.weather : [],
       kpis: s.kpis || initialSnapshot.kpis
     };
   }

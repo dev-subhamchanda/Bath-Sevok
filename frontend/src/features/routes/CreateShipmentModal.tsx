@@ -278,13 +278,17 @@ export const CreateShipmentModal: React.FC<CreateShipmentModalProps> = ({
         specialInstructions: values.specialInstructions.trim(),
         route: orsRoute
           ? {
-              distanceKm: orsRoute.distanceKm,
-              durationMinutes: orsRoute.durationMinutes
+            distanceKm: orsRoute.distanceKm,
+            durationMinutes: orsRoute.durationMinutes,
+            geometry: {
+              type: "LineString",
+              coordinates: orsRoute.rawGeoJsonCoordinates
             }
+          }
           : undefined
       });
 
-      // Preserve user display names and GeoJSON coordinates
+      // Preserve user display names, GeoJSON coordinates, and calculated road route
       createdShipment.origin = originText.trim();
       createdShipment.destination = destinationText.trim();
       createdShipment.originCoordinates = [originCoords[0], originCoords[1]];
@@ -295,6 +299,11 @@ export const CreateShipmentModal: React.FC<CreateShipmentModalProps> = ({
       createdShipment.vehicleType = values.vehicleUnit;
       if (selectedImage?.dataUrl) {
         createdShipment.driverPhotoUrl = selectedImage.dataUrl;
+      }
+      if (orsRoute && orsRoute.coordinates.length > 0) {
+        createdShipment.routeGeometry = orsRoute.coordinates;
+        createdShipment.routeDistanceKm = orsRoute.distanceKm;
+        createdShipment.routeDurationMinutes = orsRoute.durationMinutes;
       }
 
       // 6. Build RouteOption for Leaflet map if ORS returned route coordinates
@@ -370,77 +379,77 @@ export const CreateShipmentModal: React.FC<CreateShipmentModalProps> = ({
 
         {/* Modal Scrollable Body */}
         <FormProvider {...formMethods}>
-        <form id={formId} onSubmit={formMethods.handleSubmit(handleValidSubmit)} className="flex-1 overflow-y-auto p-5 sm:p-6 flex flex-col gap-5">
-          {/* Authentication Required Warning Banner */}
-          {!isAuthenticated && (
-            <div className="p-3.5 rounded-xl bg-amber-50 border border-amber-200 text-amber-900 text-xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2.5 animate-in fade-in">
-              <div className="flex items-center gap-2">
-                <span className="material-symbols-outlined text-[20px] text-amber-700 shrink-0">lock</span>
-                <div>
-                  <strong className="block text-amber-950 font-bold">Authentication Required:</strong>
-                  <span>You must log in to create a shipment on the live backend server.</span>
+          <form id={formId} onSubmit={formMethods.handleSubmit(handleValidSubmit)} className="flex-1 overflow-y-auto p-5 sm:p-6 flex flex-col gap-5">
+            {/* Authentication Required Warning Banner */}
+            {!isAuthenticated && (
+              <div className="p-3.5 rounded-xl bg-amber-50 border border-amber-200 text-amber-900 text-xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2.5 animate-in fade-in">
+                <div className="flex items-center gap-2">
+                  <span className="material-symbols-outlined text-[20px] text-amber-700 shrink-0">lock</span>
+                  <div>
+                    <strong className="block text-amber-950 font-bold">Authentication Required:</strong>
+                    <span>You must log in to create a shipment on the live backend server.</span>
+                  </div>
                 </div>
+                <button
+                  type="button"
+                  onClick={handleQuickSignIn}
+                  disabled={isSigningIn}
+                  className="px-3.5 py-1.5 rounded-lg bg-[#003356] hover:bg-[#174a73] text-white font-bold text-xs shrink-0 flex items-center gap-1.5 transition-all shadow-xs cursor-pointer disabled:opacity-50"
+                >
+                  {isSigningIn ? (
+                    <>
+                      <span className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                      <span>Signing In...</span>
+                    </>
+                  ) : (
+                    <>
+                      <span className="material-symbols-outlined text-[15px]">login</span>
+                      <span>Sign In (test@test.com)</span>
+                    </>
+                  )}
+                </button>
               </div>
-              <button
-                type="button"
-                onClick={handleQuickSignIn}
-                disabled={isSigningIn}
-                className="px-3.5 py-1.5 rounded-lg bg-[#003356] hover:bg-[#174a73] text-white font-bold text-xs shrink-0 flex items-center gap-1.5 transition-all shadow-xs cursor-pointer disabled:opacity-50"
-              >
-                {isSigningIn ? (
-                  <>
-                    <span className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                    <span>Signing In...</span>
-                  </>
-                ) : (
-                  <>
-                    <span className="material-symbols-outlined text-[15px]">login</span>
-                    <span>Sign In (test@test.com)</span>
-                  </>
-                )}
-              </button>
-            </div>
-          )}
+            )}
 
-          {/* Submission Error Banner */}
-          {submissionError && (
-            <div className="p-3.5 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 text-xs flex items-center gap-2 animate-in fade-in">
-              <span className="material-symbols-outlined text-[18px] text-rose-600 shrink-0">error</span>
-              <span className="font-semibold">{submissionError}</span>
-            </div>
-          )}
+            {/* Submission Error Banner */}
+            {submissionError && (
+              <div className="p-3.5 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 text-xs flex items-center gap-2 animate-in fade-in">
+                <span className="material-symbols-outlined text-[18px] text-rose-600 shrink-0">error</span>
+                <span className="font-semibold">{submissionError}</span>
+              </div>
+            )}
 
-          {/* Section 1: Consignment ID, Commodity, Weight, Priority, Vehicle Selection */}
-          <VehicleCommodityFields />
+            {/* Section 1: Consignment ID, Commodity, Weight, Priority, Vehicle Selection */}
+            <VehicleCommodityFields />
 
-          <SchemaFields />
+            <SchemaFields />
 
-          {/* Section 2: Origin & Destination Corridor with Autocomplete */}
-          <LocationFields
-            originText={originText}
-            onOriginChange={handleOriginChange}
-            onSelectOrigin={handleSelectOrigin}
-            destinationText={destinationText}
-            onDestinationChange={handleDestinationChange}
-            onSelectDestination={handleSelectDestination}
-          />
+            {/* Section 2: Origin & Destination Corridor with Autocomplete */}
+            <LocationFields
+              originText={originText}
+              onOriginChange={handleOriginChange}
+              onSelectOrigin={handleSelectOrigin}
+              destinationText={destinationText}
+              onDestinationChange={handleDestinationChange}
+              onSelectDestination={handleSelectDestination}
+            />
 
-          {/* Section 3: Driver Details (Manual Entry) */}
-          <DriverDetailsFields />
+            {/* Section 3: Driver Details (Manual Entry) */}
+            <DriverDetailsFields />
 
-          {/* Section 4: Driver Photo (Required, max 45 KB) */}
-          <DriverPhotoUpload
-            selectedImage={selectedImage}
-            isCompressing={isCompressingImage}
-            imageError={imageError}
-            onProcessFile={processImageFile}
-            onGenerateSample={handleGenerateSampleImage}
-            onRemoveImage={handleRemoveImage}
-          />
+            {/* Section 4: Driver Photo (Required, max 45 KB) */}
+            <DriverPhotoUpload
+              selectedImage={selectedImage}
+              isCompressing={isCompressingImage}
+              imageError={imageError}
+              onProcessFile={processImageFile}
+              onGenerateSample={handleGenerateSampleImage}
+              onRemoveImage={handleRemoveImage}
+            />
 
-          {/* Section 5: Transit Schedules, Receiver Details, and Instructions */}
-          <ReceiverScheduleFields />
-        </form>
+            {/* Section 5: Transit Schedules, Receiver Details, and Instructions */}
+            <ReceiverScheduleFields />
+          </form>
         </FormProvider>
 
         {/* Modal Footer Actions */}

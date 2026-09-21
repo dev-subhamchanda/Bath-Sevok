@@ -68,6 +68,93 @@ export interface CreateShipmentInput {
 }
 
 /**
+ * Normalizes backend / OpenRouteService route coordinates into Leaflet [latitude, longitude][] format.
+ * Inspects all possible structures:
+ * - route.coordinates
+ * - route.geometry.coordinates
+ * - route.geometry
+ * - route.route.coordinates
+ * - data.route.coordinates
+ * - shipment.route.coordinates
+ *
+ * Correctly converts GeoJSON [lng, lat] to Leaflet [lat, lng] without
+ * reversing coordinates if they are already in [lat, lng] format.
+ */
+export function normalizeRouteCoordinates(routeData: unknown): [number, number][] | undefined {
+  if (!routeData) return undefined;
+
+  let rawList: unknown[] | undefined = undefined;
+
+  if (Array.isArray(routeData)) {
+    rawList = routeData;
+  } else if (typeof routeData === "object" && routeData !== null) {
+    const obj = routeData as Record<string, unknown>;
+    if (Array.isArray(obj.coordinates)) {
+      rawList = obj.coordinates;
+    } else if (obj.geometry && typeof obj.geometry === "object") {
+      const geom = obj.geometry as Record<string, unknown>;
+      if (Array.isArray(geom.coordinates)) {
+        rawList = geom.coordinates;
+      } else if (Array.isArray(obj.geometry)) {
+        rawList = obj.geometry;
+      }
+    } else if (obj.route && typeof obj.route === "object") {
+      const r = obj.route as Record<string, unknown>;
+      if (Array.isArray(r.coordinates)) {
+        rawList = r.coordinates;
+      } else if (r.geometry && typeof r.geometry === "object") {
+        const rGeom = r.geometry as Record<string, unknown>;
+        if (Array.isArray(rGeom.coordinates)) {
+          rawList = rGeom.coordinates;
+        } else if (Array.isArray(r.geometry)) {
+          rawList = r.geometry;
+        }
+      }
+    } else if (obj.data && typeof obj.data === "object") {
+      const d = obj.data as Record<string, unknown>;
+      return normalizeRouteCoordinates(d.route || d);
+    }
+  }
+
+  if (!rawList || !Array.isArray(rawList) || rawList.length === 0) {
+    return undefined;
+  }
+
+  const normalized: [number, number][] = [];
+
+  for (const item of rawList) {
+    if (Array.isArray(item) && item.length >= 2) {
+      const c0 = Number(item[0]);
+      const c1 = Number(item[1]);
+      if (Number.isFinite(c0) && Number.isFinite(c1)) {
+        // In India / North East: Longitudes are ~68°-98°E, Latitudes are ~8°-37°N.
+        // If first > 50 and second < 40: this is GeoJSON [lng, lat] -> convert to Leaflet [lat, lng].
+        if (c0 > 50 && c1 < 40) {
+          normalized.push([c1, c0]);
+        } else {
+          // Already [lat, lng] or standard format
+          normalized.push([c0, c1]);
+        }
+      }
+    } else if (item && typeof item === "object") {
+      const pt = item as Record<string, unknown>;
+      const lat = Number(pt.lat ?? pt.latitude);
+      const lng = Number(pt.lng ?? pt.longitude);
+      if (Number.isFinite(lat) && Number.isFinite(lng)) {
+        normalized.push([lat, lng]);
+      }
+    }
+  }
+
+  // Must have at least 2 points to form a valid road route polyline
+  if (normalized.length < 2) {
+    return undefined;
+  }
+
+  return normalized;
+}
+
+/**
  * Transforms raw backend shipment document into domain Shipment entity.
  */
 export function transformBackendShipment(raw: BackendShipmentItem, index = 0): Shipment {
@@ -97,8 +184,8 @@ export function transformBackendShipment(raw: BackendShipmentItem, index = 0): S
     priorityRaw === "URGENT" || priorityRaw === "HIGH" || priorityRaw === 1
       ? 1
       : priorityRaw === "NORMAL" || priorityRaw === "MEDIUM" || priorityRaw === 2
-      ? 2
-      : 3;
+        ? 2
+        : 3;
 
   const statusMap: Record<string, "on_time" | "at_risk" | "delayed" | "delivered"> = {
     PENDING: "on_time",
@@ -110,38 +197,93 @@ export function transformBackendShipment(raw: BackendShipmentItem, index = 0): S
     DELIVERED: "delivered",
     CANCELLED: "delayed"
   };
+  const rawBackendStatus = typeof raw.status === "string" ? raw.status.toUpperCase() : "PENDING";
   const normalizedStatus = (raw.status ? statusMap[raw.status.toString().toUpperCase()] : "on_time") || "on_time";
 
   // Handle populated or raw vehicleId
-  let vehicleIdStr = "FW-18";
-  let vehicleNumber = "ML-05-D-2218";
-  let vehicleType = "Medical Utility 4x4";
+  let vehicleIdStr = "";
+  let vehicleNumber = "";
+  let vehicleType = "";
   if (raw.vehicleId) {
     if (typeof raw.vehicleId === "object") {
       const vObj = raw.vehicleId as Record<string, unknown>;
-      vehicleIdStr = (vObj._id || vObj.id || "FW-18").toString();
-      vehicleNumber = (vObj.vehicleNumber as string) || vehicleNumber;
-      vehicleType = (vObj.type as string) || vehicleType;
+      vehicleIdStr = (vObj._id || vObj.id || "").toString();
+      vehicleNumber = (vObj.vehicleNumber as string) || (vObj.registrationNumber as string) || "";
+      vehicleType = (vObj.type as string) || "";
     } else {
       vehicleIdStr = raw.vehicleId.toString();
     }
   }
+  if (!vehicleNumber && typeof raw.vehicleNumber === "string") {
+    vehicleNumber = raw.vehicleNumber;
+  }
+  if (!vehicleType && typeof raw.vehicleType === "string") {
+    vehicleType = raw.vehicleType;
+  }
 
   // Handle populated or raw driverId
-  let driverIdStr = "DRV-002";
-  let driverPhone = "+91 94361 78921";
+  let driverIdStr = "";
+  let driverPhone = "";
+  let driverName = "";
   if (raw.driverId) {
     if (typeof raw.driverId === "object") {
       const dObj = raw.driverId as Record<string, unknown>;
-      driverIdStr = (dObj._id || dObj.id || "DRV-002").toString();
-      driverPhone = (dObj.phone as string) || driverPhone;
+      driverIdStr = (dObj._id || dObj.id || "").toString();
+      driverPhone = (dObj.phone as string) || "";
+      driverName = (dObj.name as string) || "";
     } else {
       driverIdStr = raw.driverId.toString();
     }
   }
+  if (!driverName && typeof raw.driverName === "string") {
+    driverName = raw.driverName;
+  }
+  if (!driverPhone && typeof raw.driverPhone === "string") {
+    driverPhone = raw.driverPhone;
+  }
+
+  // Real route data from backend route snapshot
+  let routeGeometry: [number, number][] | undefined = undefined;
+  let routeDistanceKm: number | undefined = undefined;
+  let routeDurationMinutes: number | undefined = undefined;
+
+  const rawRoute = raw.route as Record<string, unknown> | undefined;
+  if (rawRoute) {
+    if (typeof rawRoute.distanceKm === "number") {
+      routeDistanceKm = rawRoute.distanceKm;
+    }
+    if (typeof rawRoute.durationMinutes === "number") {
+      routeDurationMinutes = rawRoute.durationMinutes;
+    }
+    routeGeometry = normalizeRouteCoordinates(rawRoute);
+  }
+
+  if (!routeGeometry) {
+    // Check if route coordinates exist on raw shipment
+    routeGeometry = normalizeRouteCoordinates(raw.routeGeometry || raw.geometry || raw.coordinates);
+  }
+
+  // Debug logging to verify backend route geometry
+  if (routeGeometry && routeGeometry.length > 0) {
+    console.log("[Route Coordinates]", rawId, "road points count:", routeGeometry.length);
+  } else {
+    console.log("[Route Debug]", rawId, "No backend route geometry available - straight-line fallback disabled");
+  }
+
+  // STRAIGHT-LINE FALLBACK DISABLED: If no route geometry is provided by backend/ORS,
+  // do NOT draw a fake straight line between origin & destination. Route will remain undefined.
 
   const rawCreatedAt = (raw.createdAt as string) || undefined;
   const rawExpectedDelivery = (raw.expectedDelivery as string) || undefined;
+
+  const progressPercent =
+    rawBackendStatus === "DELIVERED"
+      ? 100
+      : rawBackendStatus === "IN_TRANSIT"
+        ? 65
+        : rawBackendStatus === "ASSIGNED"
+          ? 35
+          : 15;
 
   return {
     id: rawId,
@@ -151,28 +293,33 @@ export function transformBackendShipment(raw: BackendShipmentItem, index = 0): S
     destination: destName,
     originCoordinates: originCoords,
     destinationCoordinates: destCoords,
-    vehicleId: vehicleIdStr,
+    vehicleId: vehicleIdStr || "UNASSIGNED",
     priority: priorityNum,
-    commodity: raw.loadType || raw.commodity || "Critical Medical Supplies",
-    progressPercent: normalizedStatus === "delivered" ? 100 : normalizedStatus === "at_risk" ? 35 : 18,
+    commodity: raw.loadType || raw.commodity || "General Consignment",
+    progressPercent,
     etaIso: rawExpectedDelivery
       ? new Date(rawExpectedDelivery).toISOString()
       : rawCreatedAt
-      ? new Date(new Date(rawCreatedAt).getTime() + 4 * 3600 * 1000).toISOString()
-      : new Date().toISOString(),
+        ? new Date(new Date(rawCreatedAt).getTime() + 4 * 3600 * 1000).toISOString()
+        : new Date().toISOString(),
     status: normalizedStatus,
+    backendStatus: rawBackendStatus,
     currentRouteId: `ROUTE-${rawId}`,
     riskScore: priorityNum === 1 ? 0.08 : 0.16,
-    driverId: driverIdStr,
-    driverName: (raw.driverName as string) || "T. Sangma",
-    driverPhone: (raw.driverPhone as string) || driverPhone,
+    driverId: driverIdStr || undefined,
+    driverName: driverName || undefined,
+    driverPhone: driverPhone || undefined,
     driverPhotoUrl:
       (raw.imageUrl as string) ||
       (raw.driverPhotoUrl as string) ||
-      "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=256&h=256&q=80",
-    vehicleNumber,
-    vehicleType,
-    weightKg: typeof raw.weightKg === "number" ? raw.weightKg : 1200
+      undefined,
+    vehicleNumber: vehicleNumber || undefined,
+    vehicleType: vehicleType || undefined,
+    weightKg: typeof raw.weightKg === "number" ? raw.weightKg : undefined,
+    routeGeometry,
+    routeDistanceKm,
+    routeDurationMinutes,
+    createdAt: rawCreatedAt
   };
 }
 
@@ -299,15 +446,15 @@ export const shipmentApi = {
 
     // Required fields per backend specifications
     formData.append("loadType", input.loadType || input.commodity || "Critical Medical Supplies");
-      if (input.trackingNumber) {
-        formData.append("trackingNumber", input.trackingNumber);
-      }
-      if (input.status) {
-        formData.append("status", input.status);
-      }
-      if (input.expectedDeliveryIso) {
-        formData.append("expectedDelivery", input.expectedDeliveryIso);
-      }
+    if (input.trackingNumber) {
+      formData.append("trackingNumber", input.trackingNumber);
+    }
+    if (input.status) {
+      formData.append("status", input.status);
+    }
+    if (input.expectedDeliveryIso) {
+      formData.append("expectedDelivery", input.expectedDeliveryIso);
+    }
     formData.append("weightKg", String(input.weightKg || 1200));
     formData.append("priority", priorityLabel);
     if (input.routeId) {
@@ -376,8 +523,8 @@ export const shipmentApi = {
     const rawObj = (createdRaw && typeof createdRaw === "object" && "shipment" in createdRaw
       ? (createdRaw as { shipment: BackendShipmentItem }).shipment
       : createdRaw && typeof createdRaw === "object" && "data" in createdRaw
-      ? (createdRaw as { data: BackendShipmentItem }).data
-      : createdRaw) as BackendShipmentItem;
+        ? (createdRaw as { data: BackendShipmentItem }).data
+        : createdRaw) as BackendShipmentItem;
 
     if (rawObj && typeof rawObj === "object") {
       const transformed = transformBackendShipment(rawObj);

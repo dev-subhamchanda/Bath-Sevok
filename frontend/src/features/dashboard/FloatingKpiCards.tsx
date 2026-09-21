@@ -13,7 +13,10 @@ export const FloatingKpiCards: React.FC<FloatingKpiCardsProps> = ({ isInline = f
   const roads = useRoadStore((s) => s.roads);
 
   // Compute live values from stores if available
-  const activeVehiclesCount = vehicles.length > 0 ? 148 : kpis.activeVehicles;
+  // Demo map data disabled for production.
+  // Kept for development/testing.
+  // const activeVehiclesCount = vehicles.length > 0 ? 148 : kpis.activeVehicles;
+  const activeVehiclesCount = vehicles.length;
   const atRiskCount =
     roads.filter((r) => r.status === "at_risk" || r.status === "under_observation").length ||
     kpis.atRiskRoutes;

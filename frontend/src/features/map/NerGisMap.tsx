@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useCallback } from "react";
+import React, { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import {
   MapContainer,
   TileLayer,
@@ -12,9 +12,11 @@ import { useIncidentStore } from "@/stores/incidentStore";
 import { useUiStore } from "@/stores/uiStore";
 import { useShipmentStore } from "@/stores/shipmentStore";
 import { initialRoads, initialVehicles, initialIncidents } from "@/services/mock/seedData";
+import { useNavigate } from "react-router-dom";
 import { DashboardMapControlPanel } from "@/features/dashboard/DashboardMapControlPanel";
 import {
   routeAlternativesApi,
+  shipmentApi,
   type ParsedAlternativeRoute,
   formatAxiosError
 } from "@/services/api/apiClient";
@@ -25,7 +27,7 @@ import { CorridorLayers } from "./CorridorLayers";
 import { VehicleMapMarkers } from "./VehicleMapMarkers";
 import { IncidentMapMarkers } from "./IncidentMapMarkers";
 import { RoutePolylineLayer } from "./RoutePolylineLayer";
-import { RouteAlternativesCard } from "./RouteAlternativesCard";
+import { DeliveryTrackingCard } from "./DeliveryTrackingCard";
 
 // Initial map view: focused closely on Assam (Guwahati / Central Assam logistics corridor)
 const ASSAM_MAP_CENTER: [number, number] = [26.15, 91.80];
@@ -75,6 +77,7 @@ function MapResizer({ isFullscreen }: { isFullscreen: boolean }) {
 }
 
 export const NerGisMap: React.FC = () => {
+  const navigate = useNavigate();
   const roadsFromStore = useRoadStore((s) => s.roads);
   const vehiclesFromStore = useVehicleStore((s) => s.vehicles);
   const incidentsFromStore = useIncidentStore((s) => s.incidents);
@@ -84,16 +87,85 @@ export const NerGisMap: React.FC = () => {
   // Sync with shipmentStore
   const shipments = useShipmentStore((s) => s.shipments);
   const selectedShipmentId = useShipmentStore((s) => s.selectedShipmentId);
+  const selectShipment = useShipmentStore((s) => s.selectShipment);
+  const setShipments = useShipmentStore((s) => s.setShipments);
+  const applyPatch = useShipmentStore((s) => s.applyPatch);
   const storeRoutes = useShipmentStore((s) => s.routes);
+  const routeFetchInProgress = useRef<Set<string>>(new Set());
 
-  const activeShipment = useMemo(() => {
-    return shipments.find((s) => s.id === selectedShipmentId) || shipments[0] || null;
+  // Hydrate fresh shipments on mount
+  useEffect(() => {
+    shipmentApi.getAll().then((data) => {
+      if (data && data.length > 0) {
+        setShipments(data);
+      }
+    }).catch(() => {});
+  }, [setShipments]);
+
+  // Real active deliveries (exclude delivered/cancelled)
+  const activeDeliveries = useMemo(() => {
+    return shipments.filter((s) => {
+      const bStatus = (s.backendStatus || s.status || "").toUpperCase();
+      return bStatus !== "DELIVERED" && bStatus !== "CANCELLED" && s.status !== "delivered";
+    });
+  }, [shipments]);
+
+  // Ensure every active delivery has its road-following route loaded from backend OpenRouteService
+  useEffect(() => {
+    activeDeliveries.forEach((s) => {
+      if (
+        (!s.routeGeometry || s.routeGeometry.length < 2) &&
+        s.originCoordinates &&
+        s.destinationCoordinates &&
+        !routeFetchInProgress.current.has(s.id)
+      ) {
+        routeFetchInProgress.current.add(s.id);
+        routeAlternativesApi
+          .fetchParsedAlternatives({
+            origin: { type: "Point", coordinates: s.originCoordinates },
+            destination: { type: "Point", coordinates: s.destinationCoordinates }
+          })
+          .then((routes) => {
+            if (routes && routes.length > 0 && routes[0].coordinates.length > 0) {
+              const best = routes[0];
+              applyPatch([
+                {
+                  id: s.id,
+                  routeGeometry: best.coordinates,
+                  routeDistanceKm: best.distanceKm,
+                  routeDurationMinutes: best.durationMinutes
+                }
+              ]);
+            }
+          })
+          .catch((err) => {
+            console.warn(`[Route Debug] Failed to fetch road route for shipment ${s.id}:`, err);
+          });
+      }
+    });
+  }, [activeDeliveries, applyPatch]);
+
+  // Tracked delivery if user selected one
+  const trackedDelivery = useMemo(() => {
+    if (!selectedShipmentId) return null;
+    return shipments.find((s) => s.id === selectedShipmentId) || null;
   }, [shipments, selectedShipmentId]);
 
+  const isTrackingActive = !!trackedDelivery;
+
+  const activeShipment = useMemo(() => {
+    return trackedDelivery || activeDeliveries[0] || null;
+  }, [trackedDelivery, activeDeliveries]);
+
   // Fallback to initial seeds if store has not hydrated yet
-  const roads = roadsFromStore.length > 0 ? roadsFromStore : initialRoads;
-  const vehicles = vehiclesFromStore.length > 0 ? vehiclesFromStore : initialVehicles;
-  const incidents = incidentsFromStore.length > 0 ? incidentsFromStore : initialIncidents;
+  // Demo map data disabled for production.
+  // Kept for development/testing.
+  // const roads = roadsFromStore.length > 0 ? roadsFromStore : initialRoads;
+  // const vehicles = vehiclesFromStore.length > 0 ? vehiclesFromStore : initialVehicles;
+  // const incidents = incidentsFromStore.length > 0 ? incidentsFromStore : initialIncidents;
+  const roads = roadsFromStore;
+  const vehicles = vehiclesFromStore;
+  const incidents = incidentsFromStore;
 
   // Search state connected to DashboardMapControlPanel
   const [searchQuery, setSearchQuery] = useState("");
@@ -158,18 +230,24 @@ export const NerGisMap: React.FC = () => {
   const [routeError, setRouteError] = useState<string | null>(null);
 
   // Derive origin and destination coordinates for the active shipment
-  const activeOriginCoordinates: [number, number] = useMemo(() => {
+  const activeOriginCoordinates: [number, number] | null = useMemo(() => {
     if (activeShipment?.originCoordinates && activeShipment.originCoordinates.length === 2) {
       return activeShipment.originCoordinates;
     }
-    return [91.7362, 26.1445]; // Default: Guwahati [lng, lat]
+    // Demo map data disabled for production.
+    // Kept for development/testing.
+    // return [91.7362, 26.1445]; // Default: Guwahati [lng, lat]
+    return null;
   }, [activeShipment]);
 
-  const activeDestinationCoordinates: [number, number] = useMemo(() => {
+  const activeDestinationCoordinates: [number, number] | null = useMemo(() => {
     if (activeShipment?.destinationCoordinates && activeShipment.destinationCoordinates.length === 2) {
       return activeShipment.destinationCoordinates;
     }
-    return [91.8933, 25.5788]; // Default: Shillong [lng, lat]
+    // Demo map data disabled for production.
+    // Kept for development/testing.
+    // return [91.8933, 25.5788]; // Default: Shillong [lng, lat]
+    return null;
   }, [activeShipment]);
 
   // Tracking from Fleet selects a shipment before opening this page.
@@ -182,6 +260,10 @@ export const NerGisMap: React.FC = () => {
 
   // Manual refresh / retry handler for user interaction
   const fetchRouteAlternatives = useCallback(async () => {
+    if (!activeOriginCoordinates || !activeDestinationCoordinates) {
+      setIsLoadingRoutes(false);
+      return;
+    }
     setIsLoadingRoutes(true);
     setRouteError(null);
     try {
@@ -209,6 +291,13 @@ export const NerGisMap: React.FC = () => {
   // Dynamically load calculated route for active shipment via backend OpenRouteService
   useEffect(() => {
     let isCancelled = false;
+
+    if (!activeShipment || !activeOriginCoordinates || !activeDestinationCoordinates) {
+      setAvailableRoutes([]);
+      setSelectedRouteId("");
+      setIsLoadingRoutes(false);
+      return;
+    }
 
     // 1. Check if shipmentStore already has a cached route geometry for this shipment
     const cachedStoreRoute = storeRoutes.find(
@@ -352,11 +441,10 @@ export const NerGisMap: React.FC = () => {
       {/* Primary Map Viewport with OpenStreetMap and Leaflet engine */}
       <div
         ref={mapWrapperRef}
-        className={`transition-all duration-300 bg-slate-100 select-none overflow-hidden ${
-          isFullscreen
+        className={`transition-all duration-300 bg-slate-100 select-none overflow-hidden ${isFullscreen
             ? "fixed inset-0 z-[9999] w-screen h-screen rounded-none border-0 shadow-2xl"
             : "relative w-full h-[500px] sm:h-[600px] lg:h-[760px] rounded-2xl border border-slate-200/80 shadow-[0_4px_20px_rgba(0,51,86,0.06)]"
-        }`}
+          }`}
       >
         {/* Floating Exit Fullscreen Button in Fullscreen Mode */}
         {isFullscreen && (
@@ -375,11 +463,13 @@ export const NerGisMap: React.FC = () => {
           </div>
         )}
 
-        {/* Consolidated Unified Floating Control Panel (Active Fleet, At Risk, Blocked, SLA, Search) */}
-        <DashboardMapControlPanel
-          searchQuery={searchQuery}
-          setSearchQuery={setSearchQuery}
-        />
+        {/* Consolidated Unified Floating Control Panel (Hidden when actively tracking a delivery) */}
+        {!isTrackingActive && activeDeliveries.length > 0 && (
+          <DashboardMapControlPanel
+            searchQuery={searchQuery}
+            setSearchQuery={setSearchQuery}
+          />
+        )}
 
         {/* Real Leaflet Map Container centered closely around Assam */}
         <MapContainer
@@ -421,94 +511,76 @@ export const NerGisMap: React.FC = () => {
             isFullscreen={isFullscreen}
           />
 
-          {/* 1. NER Arterial Corridors (Road Polylines) */}
-          <CorridorLayers
-            roads={roads}
-            isCorridorVisible={isCorridorVisible}
-            getRoadStyle={getRoadStyle}
-          />
-
-          {/* 2. Active Selected Route & Alternatives Layer */}
-          <RoutePolylineLayer
-            activeRoute={activeRoute}
-            availableRoutes={availableRoutes}
-            selectedRouteId={selectedRouteId}
-            onSelectRouteId={setSelectedRouteId}
-            activeShipment={activeShipment}
-            activeOriginCoordinates={activeOriginCoordinates}
-            activeDestinationCoordinates={activeDestinationCoordinates}
-          />
-
-          {/* 3. Vehicle Markers */}
-          <VehicleMapMarkers
-            vehicles={vehicles}
-            isVehicleVisible={isVehicleVisible}
-            isNh6Blocked={isNh6Blocked}
-          />
-
-          {/* 4. Incident Markers */}
-          <IncidentMapMarkers incidents={incidents} />
-
-          {/* 5. Live User GPS Marker */}
-          {userGpsLocation && (
-            <Marker
-              position={[userGpsLocation.lat, userGpsLocation.lng]}
-              icon={createLiveUserGpsIcon()}
-            >
-              <Popup>
-                <div className="p-2.5 font-sans min-w-[200px]">
-                  <strong className="text-xs text-[#003356] font-bold">You (Field Officer Terminal)</strong>
-                  <p className="text-[11px] text-slate-600 mt-0.5">
-                    {userGpsLocation.readableLocation || "Nongpoh Sector (KM 48)"}
-                  </p>
-                  <div className="text-[10px] font-mono text-slate-400 mt-1">
-                    {userGpsLocation.lat.toFixed(4)}° N, {userGpsLocation.lng.toFixed(4)}° E (±{userGpsLocation.accuracy}m)
-                  </div>
-                </div>
-              </Popup>
-            </Marker>
+          {/* 1. NER Arterial Corridors (Only shown in general GIS overview, hidden when tracking) */}
+          {!isTrackingActive && activeDeliveries.length > 0 && (
+            <CorridorLayers
+              roads={roads}
+              isCorridorVisible={isCorridorVisible}
+              getRoadStyle={getRoadStyle}
+            />
           )}
+
+          {/* 2. Real Delivery Tracking Layer (Consumer-style Vehicle -> Route -> Destination) */}
+          <RoutePolylineLayer
+            shipments={shipments}
+            vehicles={vehicles}
+            selectedShipmentId={selectedShipmentId}
+            onSelectShipment={selectShipment}
+          />
+
+          {/* 3. General Fleet Markers (Guarded against non-finite coords, hidden when tracking) */}
+          {!isTrackingActive && (
+            <VehicleMapMarkers
+              vehicles={vehicles}
+              isVehicleVisible={isVehicleVisible}
+              isNh6Blocked={isNh6Blocked}
+            />
+          )}
+
+          {/* 4. Incident Markers (Hidden when tracking) */}
+          {!isTrackingActive && <IncidentMapMarkers incidents={incidents} />}
         </MapContainer>
 
-        {/* Loading State Pill */}
-        {isLoadingRoutes && (
-          <div className="absolute top-20 left-1/2 -translate-x-1/2 z-[1000] bg-white/95 backdrop-blur-md px-4 py-2 rounded-full shadow-lg border border-slate-200/80 flex items-center gap-2 text-xs font-semibold text-[#003356] pointer-events-none animate-in fade-in duration-150">
-            <span className="w-3.5 h-3.5 border-2 border-[#003356] border-t-transparent rounded-full animate-spin" />
-            <span>Calculating Route Alternatives...</span>
+        {/* 5. Consumer-style Delivery Tracking Bottom Card (Rapido / Zomato / Blinkit style) */}
+        {isTrackingActive && trackedDelivery && (
+          <DeliveryTrackingCard
+            shipment={trackedDelivery}
+            allActiveShipments={activeDeliveries}
+            onSelectShipment={selectShipment}
+            onCloseTracking={() => selectShipment(null)}
+          />
+        )}
+
+        {/* 6. Overview Floating Status Pill (When viewing all active deliveries) */}
+        {!isTrackingActive && activeDeliveries.length > 0 && (
+          <div className="absolute top-4 left-1/2 -translate-x-1/2 z-20 bg-white/95 backdrop-blur-md px-4 py-2 rounded-full shadow-md border border-slate-200/80 flex items-center gap-2 text-xs text-slate-800 pointer-events-auto">
+            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-ping" />
+            <span className="font-bold text-[#003356]">
+              Tracking {activeDeliveries.length} Active {activeDeliveries.length === 1 ? "Delivery" : "Deliveries"}
+            </span>
+            <span className="text-slate-400">•</span>
+            <span className="text-[11px] text-slate-500">Click any vehicle or route to focus</span>
           </div>
         )}
 
-        {/* Error State Banner */}
-        {routeError && (
-          <div className="absolute top-20 left-1/2 -translate-x-1/2 z-[1000] max-w-md w-[calc(100%-2rem)] bg-rose-50/95 backdrop-blur-md border border-rose-200 text-rose-900 px-3.5 py-2.5 rounded-xl shadow-lg flex items-center justify-between gap-3 text-xs">
-            <div className="flex items-center gap-2 min-w-0">
-              <span className="material-symbols-outlined text-[18px] text-rose-600 shrink-0">error</span>
-              <span className="truncate">{routeError}</span>
+        {/* 7. Empty State Overlay (When 0 real active deliveries exist) */}
+        {activeDeliveries.length === 0 && (
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-[1000] bg-white/95 backdrop-blur-md p-6 rounded-3xl shadow-xl border border-slate-200/80 text-center max-w-sm flex flex-col items-center gap-3">
+            <div className="w-12 h-12 rounded-2xl bg-[#cfe4ff] text-[#001d34] flex items-center justify-center text-2xl">
+              🚚
+            </div>
+            <div>
+              <h3 className="font-bold text-base text-slate-800">No active deliveries</h3>
+              <p className="text-xs text-slate-500 mt-1">Create a shipment to start tracking in real time.</p>
             </div>
             <button
               type="button"
-              onClick={fetchRouteAlternatives}
-              className="px-2.5 py-1 bg-rose-600 hover:bg-rose-700 text-white rounded-lg text-[11px] font-bold shrink-0 transition-colors cursor-pointer"
+              onClick={() => navigate("/fleet")}
+              className="mt-1 px-4 py-2 bg-[#003356] hover:bg-[#174a73] text-white text-xs font-semibold rounded-xl shadow-xs transition-all cursor-pointer"
             >
-              Retry
+              Go to Deliveries
             </button>
           </div>
-        )}
-
-        {/* 6. Floating Route Selection & Alternatives Overlay Card */}
-        {activeRoute && (
-          <RouteAlternativesCard
-            activeRoute={activeRoute}
-            availableRoutes={availableRoutes}
-            selectedRouteId={selectedRouteId}
-            onSelectRouteId={setSelectedRouteId}
-            isLoadingRoutes={isLoadingRoutes}
-            onRefreshRoutes={fetchRouteAlternatives}
-            activeOriginCoordinates={activeOriginCoordinates}
-            activeDestinationCoordinates={activeDestinationCoordinates}
-            originName={activeShipment?.origin || "Guwahati"}
-            destinationName={activeShipment?.destination || "Itanagar"}
-          />
         )}
       </div>
     </div>
