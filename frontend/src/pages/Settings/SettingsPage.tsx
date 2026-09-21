@@ -110,14 +110,14 @@ export const SettingsPage: React.FC = () => {
 
         <div className="flex items-center gap-3 shrink-0">
           <DataSourceBadge />
-          <button
+          {/* <button
             type="button"
             onClick={() => setIsBackendModalOpen(true)}
             className="inline-flex items-center gap-2 h-10 px-4 rounded-lg bg-[#f1f4fa] hover:bg-[#e5e8ee] text-[#003356] text-xs font-semibold border border-[#e5e8ee] transition-colors cursor-pointer"
           >
             <span className="material-symbols-outlined text-[18px]">hub</span>
             <span>Configure Backend API</span>
-          </button>
+          </button> */}
         </div>
       </div>
 
@@ -427,10 +427,10 @@ export const SettingsPage: React.FC = () => {
       </form>
 
       {/* Backend Connection Modal */}
-      <BackendConnectionModal
+      {/* <BackendConnectionModal
         isOpen={isBackendModalOpen}
         onClose={() => setIsBackendModalOpen(false)}
-      />
+      /> */}
     </div>
   );
 };
