@@ -239,7 +239,8 @@ export const CreateShipmentModal: React.FC<CreateShipmentModalProps> = ({
       try {
         const routes = await routeAlternativesApi.fetchParsedAlternatives({
           origin: originGeoJson,
-          destination: destinationGeoJson
+          destination: destinationGeoJson,
+          vehicle_profile: "heavy_truck"
         });
         if (routes && routes.length > 0) {
           orsRoute = routes[0];

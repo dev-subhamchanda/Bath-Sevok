@@ -10,6 +10,7 @@ export interface GeoJsonPoint {
 export interface RouteAlternativesRequestBody {
   origin: GeoJsonPoint;
   destination: GeoJsonPoint;
+  vehicle_profile?: string;
 }
 
 export const DEFAULT_ROUTE_COORDINATES: RouteAlternativesRequestBody = {
@@ -35,11 +36,24 @@ export interface ApiRawRouteItem {
   name?: string;
   summary?: string;
   via?: string;
+  total_distance_km?: number;
+  duration_min?: number;
+  verdict?: string;
+  action?: string;
+  primary_hazard?: string;
+  closure_likelihood?: number;
+  warnings?: unknown[];
+  dispatch_window?: { message?: string; projected_verdict?: string };
   [key: string]: unknown;
 }
 
 export interface RouteAlternativesApiResponse {
   routes?: ApiRawRouteItem[];
+  recommendation?: string;
+  ranking?: string[];
+  vehicle_profile?: string;
+  start?: [number, number];
+  end?: [number, number];
   data?: {
     routes?: ApiRawRouteItem[];
   };
@@ -58,6 +72,13 @@ export interface ParsedAlternativeRoute {
   summary: string;
   via: string;
   isFlooded?: boolean;
+  vehicleProfile?: string;
+  verdict?: string;
+  action?: string;
+  primaryHazard?: string;
+  closureLikelihood?: number;
+  warnings?: unknown[];
+  dispatchMessage?: string;
 }
 
 /**
@@ -116,14 +137,27 @@ export function parseRouteAlternativesResponse(
   rawResponse: RouteAlternativesApiResponse | ApiRawRouteItem[]
 ): ParsedAlternativeRoute[] {
   let list: ApiRawRouteItem[] = [];
+  let responseMeta: RouteAlternativesApiResponse | undefined;
 
   if (Array.isArray(rawResponse)) {
     list = rawResponse;
   } else if (rawResponse && typeof rawResponse === "object") {
+    responseMeta = rawResponse;
     if (Array.isArray(rawResponse.routes)) {
       list = rawResponse.routes;
     } else if (rawResponse.data && Array.isArray(rawResponse.data.routes)) {
       list = rawResponse.data.routes;
+    } else {
+      // The AI dispatch adapter may be wrapped by the Node backend as
+      // { routes: { recommendation, ranking, routes: [...] } }.
+      const wrappedRoutes = rawResponse.routes as unknown;
+      if (wrappedRoutes && typeof wrappedRoutes === "object") {
+        const dispatchResponse = wrappedRoutes as RouteAlternativesApiResponse;
+        responseMeta = dispatchResponse;
+        if (Array.isArray(dispatchResponse.routes)) {
+          list = dispatchResponse.routes;
+        }
+      }
     }
   }
 
@@ -134,8 +168,10 @@ export function parseRouteAlternativesResponse(
   return list.map((item, index) => {
     const leafletCoords = extractLeafletCoordinates(item);
     const rawGeoCoords = (item.coordinates || item.geometry?.coordinates || []) as [number, number][];
-    const dist = typeof item.distanceKm === "number" ? Math.round(item.distanceKm * 10) / 10 : 0;
-    const dur = typeof item.durationMinutes === "number" ? Math.round(item.durationMinutes) : 0;
+    const rawDistance = item.distanceKm ?? item.total_distance_km;
+    const rawDuration = item.durationMinutes ?? item.duration_min;
+    const dist = typeof rawDistance === "number" ? Math.round(rawDistance * 10) / 10 : 0;
+    const dur = typeof rawDuration === "number" ? Math.round(rawDuration) : 0;
     const letter = String.fromCharCode(65 + index); // A, B, C...
 
     return {
@@ -148,7 +184,14 @@ export function parseRouteAlternativesResponse(
       coordinates: leafletCoords,
       rawGeoJsonCoordinates: rawGeoCoords,
       summary: (item.summary as string) || `${dist} km corridor connecting origin and destination`,
-      via: (item.via as string) || (index === 0 ? "Guwahati ➔ Tezpur ➔ Itanagar" : `Bypass Corridor ${letter}`)
+      via: (item.via as string) || (item.primary_hazard as string) || (index === 0 ? "Primary corridor" : `Alternative Corridor ${letter}`),
+      vehicleProfile: responseMeta?.vehicle_profile,
+      verdict: item.verdict,
+      action: item.action,
+      primaryHazard: item.primary_hazard,
+      closureLikelihood: item.closure_likelihood,
+      warnings: item.warnings,
+      dispatchMessage: item.dispatch_window?.message
     };
   });
 }

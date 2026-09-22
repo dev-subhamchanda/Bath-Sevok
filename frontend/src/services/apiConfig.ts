@@ -31,7 +31,7 @@ export interface PingResult {
  * - Strips trailing slashes
  */
 export function normalizeHttpUrl(rawUrl: string): string {
-  if (!rawUrl) return "https://bath-sevok-server-nlbg.onrender.com";
+  if (!rawUrl) return import.meta.env.VITE_API_BACKEND_URL as  string
 
   let cleaned = rawUrl.trim().replace(/^["']|["']$/g, "");
 

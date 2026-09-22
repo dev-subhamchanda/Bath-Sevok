@@ -28,6 +28,7 @@ import { VehicleMapMarkers } from "./VehicleMapMarkers";
 import { IncidentMapMarkers } from "./IncidentMapMarkers";
 import { RoutePolylineLayer } from "./RoutePolylineLayer";
 import { DeliveryTrackingCard } from "./DeliveryTrackingCard";
+import { RouteAlternativesCard } from "./RouteAlternativesCard";
 
 // Initial map view: focused closely on Assam (Guwahati / Central Assam logistics corridor)
 const ASSAM_MAP_CENTER: [number, number] = [26.15, 91.80];
@@ -123,7 +124,8 @@ export const NerGisMap: React.FC = () => {
         routeAlternativesApi
           .fetchParsedAlternatives({
             origin: { type: "Point", coordinates: s.originCoordinates },
-            destination: { type: "Point", coordinates: s.destinationCoordinates }
+            destination: { type: "Point", coordinates: s.destinationCoordinates },
+            vehicle_profile: "heavy_truck"
           })
           .then((routes) => {
             if (routes && routes.length > 0 && routes[0].coordinates.length > 0) {
@@ -269,7 +271,8 @@ export const NerGisMap: React.FC = () => {
     try {
       const routes = await routeAlternativesApi.fetchParsedAlternatives({
         origin: { type: "Point", coordinates: activeOriginCoordinates },
-        destination: { type: "Point", coordinates: activeDestinationCoordinates }
+        destination: { type: "Point", coordinates: activeDestinationCoordinates },
+        vehicle_profile: "heavy_truck"
       });
       if (routes && routes.length > 0) {
         setAvailableRoutes(routes);
@@ -341,7 +344,8 @@ export const NerGisMap: React.FC = () => {
     routeAlternativesApi
       .fetchParsedAlternatives({
         origin: { type: "Point", coordinates: activeOriginCoordinates },
-        destination: { type: "Point", coordinates: activeDestinationCoordinates }
+        destination: { type: "Point", coordinates: activeDestinationCoordinates },
+        vehicle_profile: "heavy_truck"
       })
       .then((routes) => {
         if (!isCancelled && routes && routes.length > 0) {
@@ -548,6 +552,21 @@ export const NerGisMap: React.FC = () => {
             allActiveShipments={activeDeliveries}
             onSelectShipment={selectShipment}
             onCloseTracking={() => selectShipment(null)}
+          />
+        )}
+
+        {activeRoute && activeOriginCoordinates && activeDestinationCoordinates && (
+          <RouteAlternativesCard
+            activeRoute={activeRoute}
+            availableRoutes={availableRoutes}
+            selectedRouteId={selectedRouteId}
+            onSelectRouteId={setSelectedRouteId}
+            isLoadingRoutes={isLoadingRoutes}
+            onRefreshRoutes={fetchRouteAlternatives}
+            activeOriginCoordinates={activeOriginCoordinates}
+            activeDestinationCoordinates={activeDestinationCoordinates}
+            originName={activeShipment?.origin || "Origin"}
+            destinationName={activeShipment?.destination || "Destination"}
           />
         )}
 
