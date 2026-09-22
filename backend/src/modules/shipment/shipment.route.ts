@@ -14,7 +14,7 @@ const shipmentImageUpload = multer({
 	},
 });
 
-router.use(authMiddleware);
+// router.use(authMiddleware);
 router.post('/create', shipmentImageUpload.single('image'), createShipment);
 router.get('/list', getShipments);
 router.post('/tracking', trackShipmentController);

@@ -1,4 +1,5 @@
 import { getAlternativeRoutes } from './route.service.js';
+import { getPreferableRoute } from '../../integrations/aiService.js';
 const isPoint = (value) => {
     if (!value || typeof value !== 'object') {
         return false;
@@ -18,7 +19,7 @@ const isPoint = (value) => {
         && latitude <= 90;
 };
 export const getRoutes = async (req, res) => {
-    const { origin, destination } = req.body;
+    const { origin, destination, vehicle_profile: vehicleProfile = 'heavy_truck', } = req.body;
     if (!isPoint(origin) || !isPoint(destination)) {
         res.status(400).json({
             message: 'origin and destination must be GeoJSON Point objects',
@@ -26,7 +27,14 @@ export const getRoutes = async (req, res) => {
         return;
     }
     try {
-        const routes = await getAlternativeRoutes(origin, destination);
+        // ROUTE FROM OPENROUTESERVICE
+        // const routes = await getAlternativeRoutes(origin, destination);
+        // ROUTE FROM AI SERVICE
+        const routes = await getPreferableRoute({
+            origin,
+            destination,
+            vehicle_profile: vehicleProfile,
+        });
         res.status(200).json({ routes });
     }
     catch (error) {

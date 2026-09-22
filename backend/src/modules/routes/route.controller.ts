@@ -1,6 +1,6 @@
 import type { Request, Response } from 'express';
 import { getAlternativeRoutes, type Point } from './route.service.js';
-
+import { getPreferableRoute } from '../../integrations/aiService.js';
 const isPoint = (value: unknown): value is Point => {
     if (!value || typeof value !== 'object') {
         return false;
@@ -23,7 +23,11 @@ const isPoint = (value: unknown): value is Point => {
 };
 
 export const getRoutes = async (req: Request, res: Response): Promise<void> => {
-    const { origin, destination } = req.body as { origin?: unknown; destination?: unknown };
+    const {
+        origin,
+        destination,
+        vehicle_profile: vehicleProfile = 'heavy_truck',
+    } = req.body as { origin?: unknown; destination?: unknown; vehicle_profile?: unknown };
 
     if (!isPoint(origin) || !isPoint(destination)) {
         res.status(400).json({
@@ -33,7 +37,14 @@ export const getRoutes = async (req: Request, res: Response): Promise<void> => {
     }
 
     try {
-        const routes = await getAlternativeRoutes(origin, destination);
+    // ROUTE FROM OPENROUTESERVICE
+        // const routes = await getAlternativeRoutes(origin, destination);
+    // ROUTE FROM AI SERVICE
+        const routes = await getPreferableRoute({
+            origin,
+            destination,
+            vehicle_profile: vehicleProfile,
+        });
         res.status(200).json({ routes });
     } catch (error) {
         console.error('Error getting alternative routes:', error);
