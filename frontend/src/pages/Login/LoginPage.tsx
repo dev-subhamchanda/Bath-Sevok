@@ -199,7 +199,7 @@ export const LoginPage: React.FC = () => {
             <Logo size={36} />
           </div>
           <h1 className="text-2xl sm:text-3xl font-semibold text-[#003356] tracking-tight uppercase ">
-            ZYANTRIX
+            ZENTRIXA
           </h1>
         </div>
         <p className="text-xs sm:text-sm text-[#42474e] max-w-md">

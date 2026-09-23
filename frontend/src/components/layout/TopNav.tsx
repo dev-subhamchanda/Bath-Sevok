@@ -48,7 +48,7 @@ export const TopNav: React.FC = () => {
             </div>
             <div className="flex items-center gap-2 min-w-0">
               <span className="font-semibold text-sm sm:text-lg text-[#003356] tracking-tight truncate text-shadow-md">
-                ZYANTRIX
+                ZENTRIXA
               </span>
               <div className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-[#005148]/10 text-[#005148] shrink-0">
                 <span className="w-1.5 h-1.5 rounded-full bg-[#005148] animate-pulse" />
