@@ -194,12 +194,12 @@ export const LoginPage: React.FC = () => {
           <span>Regional Logistics Gateway • North East India</span>
         </div>
 
-        <div className="flex items-center justify-center gap-3 mb-2">
+        <div className="flex items-center justify-center gap-3 mb-2 ">
           <div className="w-12 h-12 rounded-xl bg-white flex items-center justify-center p-2 shadow-sm border border-[#e5e8ee]">
             <Logo size={36} />
           </div>
-          <h1 className="text-2xl sm:text-3xl font-bold text-[#003356] tracking-tight">
-            NER Logistics Intelligence
+          <h1 className="text-2xl sm:text-3xl font-bold text-[#003356] tracking-tight ">
+            Zyantrix
           </h1>
         </div>
         <p className="text-xs sm:text-sm text-[#42474e] max-w-md">
