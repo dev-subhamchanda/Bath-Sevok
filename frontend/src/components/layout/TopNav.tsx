@@ -47,8 +47,8 @@ export const TopNav: React.FC = () => {
               <Logo size={24} />
             </div>
             <div className="flex items-center gap-2 min-w-0">
-              <span className="font-bold text-sm sm:text-lg text-[#003356] tracking-tight truncate">
-                NER Logistics
+              <span className="font-semibold text-sm sm:text-lg text-[#003356] tracking-tight truncate">
+                ZYANTRIX
               </span>
               <div className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-[#005148]/10 text-[#005148] shrink-0">
                 <span className="w-1.5 h-1.5 rounded-full bg-[#005148] animate-pulse" />
